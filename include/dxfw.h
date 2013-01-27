@@ -6,3 +6,4 @@
 #include "dx_tiny_gui.h"
 #include "dx_vertex_structs.h"
 #include "input_interface.h"
+#include "windows_util.h"
