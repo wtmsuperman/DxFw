@@ -1,6 +1,6 @@
 #ifndef __NODE__
 #define __NODE__
-#include "../mathlib/mathlib.h"
+#include "mathlib.h"
 
 
 class Node

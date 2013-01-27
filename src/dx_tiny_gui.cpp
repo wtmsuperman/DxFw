@@ -294,4 +294,9 @@ void GUIButton::onRender(DxRenderer* renderer)
 	renderer->applyTexture(0,0);
 }
 
+void GUIButton::postRender(DxRenderer* renderer)
+{
+	renderer->disableTransparent();
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
