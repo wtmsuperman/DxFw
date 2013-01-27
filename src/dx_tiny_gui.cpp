@@ -81,10 +81,10 @@ GUIButton* GUILayout::createButton(int x,int y,int width,int height,int id)
 	btn->id = id;
 	btn->type = GUIControl::GUI_BUTTON;
 	GUIVertex vertex[] = {
-		 {x,y,0.0f,1.0f,0.0f,0.0f}
-		,{x+width,y,0.0f,1.0f,1.0f,0.0f}
-		,{x,y+height,0.0f,1.0f,0.0f,1.0f}
-		,{x+width,y+height,0.0f,1.0f,1.0f,1.0f}
+		 {(float)x,(float)y,0.0f,1.0f,0.0f,0.0f}
+		,{(float)(x+width),(float)y,0.0f,1.0f,1.0f,0.0f}
+		,{(float)x,(float)(y+height),0.0f,1.0f,0.0f,1.0f}
+		,{(float)(x+width),(float)(y+height),0.0f,1.0f,1.0f,1.0f}
 	};
 	char name[32];
 	sprintf(name,"gui_%d_%d",mID,id);
@@ -104,10 +104,10 @@ GUIImage* GUILayout::createImage(int x,int y,int width,int height,int id)
 	img->id = id;
 	img->type = GUIControl::GUI_IMAGE;
 	GUIVertex vertex[] = {
-		 {x,y,0.0f,1.0f,0.0f,0.0f}
-		,{x+width,y,0.0f,1.0f,1.0f,0.0f}
-		,{x,y+height,0.0f,1.0f,0.0f,1.0f}
-		,{x+width,y+height,0.0f,1.0f,1.0f,1.0f}
+		 {(float)x,(float)y,0.0f,1.0f,0.0f,0.0f}
+		,{(float)(x+width),(float)y,0.0f,1.0f,1.0f,0.0f}
+		,{(float)x,(float)(y+height),0.0f,1.0f,0.0f,1.0f}
+		,{(float)(x+width),(float)(y+height),0.0f,1.0f,1.0f,1.0f}
 	};
 	char name[32];
 	sprintf(name,"gui_%d_%d",mID,id);

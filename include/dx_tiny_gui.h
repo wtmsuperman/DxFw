@@ -169,7 +169,7 @@ public:
 	}
 
 	bool				createFont(int id);
-	ID3DXFont*			getFontByID(int id);
+	ID3DXFont*			getFontByID(int id) {return 0;}
 	void				releaseFont(int id);
 	void				release();
 private:
