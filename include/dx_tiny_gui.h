@@ -48,7 +48,7 @@ public:
 	{
 		GUI_BUTTON_UP = 0,
 		GUI_BUTTON_DWON = 1,
-		GUI_BUTTON_MOVE = 2
+		GUI_BUTTON_OVER = 2
 	};
 public:
 	GUIButton()

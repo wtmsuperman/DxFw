@@ -5,6 +5,11 @@
 #include "scene_node.h"
 #include "scene_node_container.h"
 
+void fuck(int id)
+{
+	MessageBox(0,"h","",MB_OK);
+}
+
 
 int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 {
@@ -70,8 +75,9 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	label->setText("wo le ge fuck");
 	guisys->changeCurrentLayout(layout);
 
-	GUIButton* btn = layout->createButton(0,100,160,32,1);
+	GUIButton* btn = layout->createButton(0,100,128,32,1);
 	btn->setTexture("menu/startUp.png","menu/startDown.png","menu/startOver.png");
+	btn->setClickListener(fuck);
 
 	//GUIImage* img = layout->createImage(0,0,800,600,2);
 	//img->setImage("menu/mainMenu.jpg");
@@ -116,8 +122,7 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		n->translate(walk,Node::TS_PARENT);
 
 		isys->capture();
-		POINT p;
-		GetCursorPos(&p);
+		Point p = isys->getMouseClientPosition();
 		guisys->processGUI(p.x,p.y,isys->mouseButtonDown(0));
 		renderer->present();
 

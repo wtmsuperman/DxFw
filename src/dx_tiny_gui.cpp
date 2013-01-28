@@ -187,10 +187,10 @@ GUIButton* GUILayout::createButton(int x,int y,int width,int height,int id)
 	btn->id = id;
 	btn->type = GUIControl::GUI_BUTTON;
 	GUIVertex vertex[] = {
-		{(float)x,(float)y,0.0f,1.0f,0.0f,0.0f}
-		,{(float)(x+width),(float)y,0.0f,1.0f,1.0f,0.0f}
-		,{(float)x,(float)(y+height),0.0f,1.0f,0.0f,1.0f}
+		{(float)x+width,(float)y,0.0f,1.0f,1.0f,0.0f}
 		,{(float)(x+width),(float)(y+height),0.0f,1.0f,1.0f,1.0f}
+		,{(float)x,(float)y,0.0f,1.0f,0.0f,0.0f}
+		,{(float)x,(float)(y+height),0.0f,1.0f,0.0f,1.0f}
 	};
 	char name[32];
 	sprintf(name,"gui_%d_%d",mID,id);
@@ -211,10 +211,10 @@ GUIImage* GUILayout::createImage(int x,int y,int width,int height,int id)
 	img->id = id;
 	img->type = GUIControl::GUI_IMAGE;
 	GUIVertex vertex[] = {
-		{(float)x,(float)y,0.0f,1.0f,0.0f,0.0f}
-		,{(float)(x+width),(float)y,0.0f,1.0f,1.0f,0.0f}
-		,{(float)x,(float)(y+height),0.0f,1.0f,0.0f,1.0f}
+		{(float)x+width,(float)y,0.0f,1.0f,1.0f,0.0f}
 		,{(float)(x+width),(float)(y+height),0.0f,1.0f,1.0f,1.0f}
+		,{(float)x,(float)y,0.0f,1.0f,0.0f,0.0f}
+		,{(float)x,(float)(y+height),0.0f,1.0f,0.0f,1.0f}
 	};
 	char name[32];
 	sprintf(name,"gui_%d_%d",mID,id);
@@ -381,12 +381,13 @@ void GUIButton::setTexture(const char* up,const char* down,const char* over)
 
 void GUIButton::callback(int mx,int my,bool mouseDown)
 {
+	mState = GUI_BUTTON_UP;
 	if (mx >= x && mx <= x+width && my >= y && my <= y + height){
 		if (mouseDown){
 			mState = GUI_BUTTON_DWON;
 		}
 		else{
-			mState = GUI_BUTTON_MOVE;
+			mState = GUI_BUTTON_OVER;
 		}
 	}
 
@@ -410,7 +411,7 @@ void GUIButton::onRender(DxRenderer* renderer)
 	case GUI_BUTTON_DWON:
 		renderer->applyTexture(0,mDownTexture);
 		break;
-	case GUI_BUTTON_MOVE:
+	case GUI_BUTTON_OVER:
 		renderer->applyTexture(0,mOverTexture);
 		break;
 	}
