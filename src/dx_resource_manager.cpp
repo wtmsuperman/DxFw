@@ -531,8 +531,9 @@ void DxResourceManager::releaseResource(const char* groupName)
 
 void DxResourceManager::releaseAndRemove(const char* groupName)
 {
-	assert(mResourceGroups.find(groupName) != mResourceGroups.end() && "do not have that group");
+	
 	ResourceGroupIter iter = mResourceGroups.find(groupName);
+	assert(iter != mResourceGroups.end() && "do not have that group");
 	iter->second->release();
 	mResourceGroups.erase(iter);
 }

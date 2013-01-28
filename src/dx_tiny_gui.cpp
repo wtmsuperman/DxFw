@@ -1,8 +1,27 @@
 #include "dx_tiny_gui.h"
 
-GUISystem::GUISystem(DxRenderer* renderer,DxResourceManager* resMgr)
-	:mRenderer(renderer),mResourceMgr(resMgr),mLayouts()
+GUISystem::GUISystem()
 {
+	mCurrentLayout = 0;
+	mResourceMgr = 0;
+	mRenderer = 0;
+	mDevice = 0;
+}
+
+void GUISystem::initOnce(const DxFw& df)
+{
+	static bool flag = true;
+	if (flag)
+	{
+		mResourceMgr = df.getResourceManager();
+		mRenderer = df.getRenderer();
+		mDevice = df.getDevice();
+		flag = false;
+	}
+	else
+	{
+		assert(false && "gui syetem should only initialize once");
+	}
 }
 
 GUILayout*	GUISystem::createLayout(int id)
@@ -45,6 +64,92 @@ void GUISystem::destroyLayout(int id)
 	}
 }
 
+DxFont* GUISystem::getFontByID(int id)
+{
+	FontIter end = mFonts.end();
+	for (FontIter iter = mFonts.begin(); iter != end; ++iter){
+		if ((*iter)->id == id)
+		{
+			return *iter;
+		}
+	}
+
+	return 0;
+}
+
+void GUISystem::releaseFont(int id)
+{
+	FontIter end = mFonts.end();
+	for (FontIter iter = mFonts.begin(); iter != end; ++iter){
+		if ((*iter)->id == id)
+		{
+			(*iter)->font->Release();
+			delete *iter;
+			mFonts.erase(iter);
+			return;
+		}
+	}
+	assert(false && "font does not exists");
+}
+
+void GUISystem::release()
+{
+	//release all layout
+	LayoutIter end = mLayouts.end();
+	for (LayoutIter iter = mLayouts.begin(); iter != end; ++iter){
+		GUILayout* layout = *iter;
+		char buffer[32];
+		sprintf(buffer,"gui_%d",layout->mID);
+		mResourceMgr->releaseAndRemove(buffer);
+		delete layout;
+	}
+	mLayouts.clear();
+
+	//release all font
+	FontIter fend = mFonts.end();
+	for (FontIter iter = mFonts.begin(); iter != fend; ++iter){
+		safe_Release((*iter)->font);
+		delete *iter;
+	}
+	mFonts.clear();
+}
+
+GUILayout* GUISystem::changeCurrentLayout(int id)
+{
+	GUILayout* last = mCurrentLayout;
+	mCurrentLayout = getLayout(id);
+	assert(mCurrentLayout != 0 && "layout does not exists");
+	return last;
+}
+
+GUILayout* GUISystem::changeCurrentLayout(GUILayout* layout)
+{
+	GUILayout* last = mCurrentLayout;
+	mCurrentLayout = layout;
+	assert(mCurrentLayout != 0 && "layout value error");
+	return last;
+}
+
+DxFont* GUISystem::createFont(const char* fontName,int weight,bool italic,int size,int id)
+{
+	assert(getFontByID(id) == 0 && "font already exists");
+	LPD3DXFONT font;
+	if (FAILED(D3DXCreateFont(mDevice,size,0,weight,1,italic
+		,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,DEFAULT_QUALITY
+		,DEFAULT_PITCH | FF_DONTCARE
+		,fontName
+		,&font)))
+	{
+		0;
+	}
+
+	DxFont* newfont = new DxFont;
+	newfont->font = font;
+	newfont->id = id;
+	mFonts.push_back(newfont);
+	return newfont;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //
@@ -67,6 +172,7 @@ GUILabel* GUILayout::createLabel(int x,int y,int width,int height,int id,int fon
 	label->height = height;
 	label->id = id;
 	label->setFont(fontID);
+	label->layout = this;
 	mGUIControls.push_back(label);
 	return label;
 }
@@ -81,7 +187,7 @@ GUIButton* GUILayout::createButton(int x,int y,int width,int height,int id)
 	btn->id = id;
 	btn->type = GUIControl::GUI_BUTTON;
 	GUIVertex vertex[] = {
-		 {(float)x,(float)y,0.0f,1.0f,0.0f,0.0f}
+		{(float)x,(float)y,0.0f,1.0f,0.0f,0.0f}
 		,{(float)(x+width),(float)y,0.0f,1.0f,1.0f,0.0f}
 		,{(float)x,(float)(y+height),0.0f,1.0f,0.0f,1.0f}
 		,{(float)(x+width),(float)(y+height),0.0f,1.0f,1.0f,1.0f}
@@ -90,6 +196,7 @@ GUIButton* GUILayout::createButton(int x,int y,int width,int height,int id)
 	sprintf(name,"gui_%d_%d",mID,id);
 	DxBuffer* buffer = mGUIResourceGroup->createStaticBuffer(name,GUIVertex::GUI_FVF,D3DPT_TRIANGLESTRIP,4,0,sizeof(GUIVertex),(void**)&vertex,0);
 	btn->setStaticBuffer(buffer);
+	btn->layout = this;
 	mGUIControls.push_back(btn);
 	return btn;
 }
@@ -104,7 +211,7 @@ GUIImage* GUILayout::createImage(int x,int y,int width,int height,int id)
 	img->id = id;
 	img->type = GUIControl::GUI_IMAGE;
 	GUIVertex vertex[] = {
-		 {(float)x,(float)y,0.0f,1.0f,0.0f,0.0f}
+		{(float)x,(float)y,0.0f,1.0f,0.0f,0.0f}
 		,{(float)(x+width),(float)y,0.0f,1.0f,1.0f,0.0f}
 		,{(float)x,(float)(y+height),0.0f,1.0f,0.0f,1.0f}
 		,{(float)(x+width),(float)(y+height),0.0f,1.0f,1.0f,1.0f}
@@ -113,18 +220,22 @@ GUIImage* GUILayout::createImage(int x,int y,int width,int height,int id)
 	sprintf(name,"gui_%d_%d",mID,id);
 	DxBuffer* buffer = mGUIResourceGroup->createStaticBuffer(name,GUIVertex::GUI_FVF,D3DPT_TRIANGLESTRIP,4,0,sizeof(GUIVertex),(void**)&vertex,0);
 	img->setStaticBuffer(buffer);
+	img->layout = this;
 	mGUIControls.push_back(img);
 	return img;
 }
 
 void GUILayout::render()
 {
+	mRenderer->beginScene();
 	GUIIter end = mGUIControls.end();
 	for (GUIIter iter = mGUIControls.begin(); iter != end; ++iter){
-		(*iter)->preRender(mRenderer);
-		(*iter)->onRender(mRenderer);
-		(*iter)->postRender(mRenderer);
+		GUIControl* ctrl = *iter;
+		ctrl->preRender(mRenderer);
+		ctrl->onRender(mRenderer);
+		ctrl->postRender(mRenderer);
 	}
+	mRenderer->endScene();
 }
 
 void GUILayout::destroyControl(int id)
@@ -193,7 +304,7 @@ void GUILabel::setText(const char* text)
 	strcpy(mText,text);
 }
 
-void GUILabel::setText(const char* s,...)
+void GUILabel::printf(const char* s,...)
 {
 	safe_deleteArray(mText);
 	mText = new char[512];
@@ -225,7 +336,9 @@ void GUILabel::preRender(DxRenderer* renderer)
 
 void GUILabel::onRender(DxRenderer* renderer)
 {
-	ID3DXFont* font = FontManager::getSingletonPtr()->getFontByID(mFontID);
+	DxFont*	dxfont = GUISystem::getSingletonPtr()->getFontByID(mFontID);
+	assert(dxfont != 0 && "font id error");
+	ID3DXFont* font = dxfont->font;
 	RECT rect = {x,y,x+width,y+height};
 	font->DrawTextA(0,mText,-1,&rect,DT_SINGLELINE | DT_TOP | DT_LEFT,mColor);
 }
@@ -241,11 +354,15 @@ void GUILabel::postRender(DxRenderer* renderer)
 // GUIImage
 //
 
+void GUIImage::setImage(const char* img)
+{
+	mImage = layout->getResourceGroup()->loadTexture(img);
+}
+
 void GUIImage::onRender(DxRenderer* renderer)
 {
 	renderer->applyTexture(0,mImage);
 	renderer->render(mBuffer);
-	renderer->applyTexture(0,0); //
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -254,6 +371,13 @@ void GUIImage::onRender(DxRenderer* renderer)
 //
 // GUIButton
 //
+
+void GUIButton::setTexture(const char* up,const char* down,const char* over)
+{
+	mUpTexture = layout->getResourceGroup()->loadTexture(up);
+	mOverTexture = layout->getResourceGroup()->loadTexture(over);
+	mDownTexture = layout->getResourceGroup()->loadTexture(down);
+}
 
 void GUIButton::callback(int mx,int my,bool mouseDown)
 {
@@ -287,11 +411,10 @@ void GUIButton::onRender(DxRenderer* renderer)
 		renderer->applyTexture(0,mDownTexture);
 		break;
 	case GUI_BUTTON_MOVE:
-		renderer->applyTexture(0,mMoveTexture);
+		renderer->applyTexture(0,mOverTexture);
 		break;
 	}
 	renderer->render(mStaticBuffer);
-	renderer->applyTexture(0,0);
 }
 
 void GUIButton::postRender(DxRenderer* renderer)

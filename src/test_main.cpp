@@ -43,6 +43,12 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	light.Specular  = D3DXCOLOR(0.2f, 0.2f, 0.2f, 1.0f);
 	light.Direction = D3DXVECTOR3(1.0f, -1.0f, 0.0f);
 
+	IDirect3DDevice9* device = df.getDevice();
+
+	device->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_LINEAR);
+	device->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_LINEAR);
+	device->SetSamplerState(0,D3DSAMP_MIPFILTER,D3DTEXF_POINT);
+
 	df.getRenderer()->setLight(0,&light);
 
 	Node camera;
@@ -54,6 +60,22 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	//Device->SetRenderState(D3DRS_NORMALIZENORMALS, true);
 	//Device->SetRenderState(D3DRS_SPECULARENABLE, true);
 
+	GUISystem* guisys = GUISystem::getSingletonPtr();
+	guisys->initOnce(df);
+
+	GUILayout* layout = guisys->createLayout(0);
+	guisys->createFont("",15,false,15,0);
+	GUILabel* label = layout->createLabel(0,0,800,600,0,0);
+	label->setColor(0xffff0000);
+	label->setText("wo le ge fuck");
+	guisys->changeCurrentLayout(layout);
+
+	GUIButton* btn = layout->createButton(0,100,160,32,1);
+	btn->setTexture("menu/startUp.png","menu/startDown.png","menu/startOver.png");
+
+	//GUIImage* img = layout->createImage(0,0,800,600,2);
+	//img->setImage("menu/mainMenu.jpg");
+
 	while (true)
 	{
 		DxRenderer* renderer = df.getRenderer();
@@ -62,6 +84,8 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		camera.generateParentToLocalMatrix(&v);
 		renderer->setViewMatrix(v);
 		renderer->render(&c);
+		guisys->render();
+		
 
 		//n->yaw(getTimeSinceLastFrame() * 1.0f);
 		float timeDelta = getTimeSinceLastFrame();
@@ -92,7 +116,9 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		n->translate(walk,Node::TS_PARENT);
 
 		isys->capture();
-
+		POINT p;
+		GetCursorPos(&p);
+		guisys->processGUI(p.x,p.y,isys->mouseButtonDown(0));
 		renderer->present();
 
 		messagePump(&msg);
@@ -102,6 +128,7 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		}
 	}
 	
+	guisys->release();
 	df.release();
 	UnregisterClass(info.className,info.hist);
 	return 0;

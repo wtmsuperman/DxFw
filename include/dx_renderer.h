@@ -120,7 +120,7 @@ void DxRenderer::enableTransparent()
 {
 	mDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true);
 	mDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_SRCALPHA);
-	mDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVDESTALPHA);
+	mDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
 }
 
 void DxRenderer::disableTransparent()
