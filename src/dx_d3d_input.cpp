@@ -1,4 +1,4 @@
-#include "d3d_input.h"
+#include "dx_d3d_input.h"
 
 #pragma comment(lib,"dinput8.lib")
 #pragma comment(lib,"dxguid.lib")

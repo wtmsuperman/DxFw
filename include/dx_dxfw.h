@@ -3,7 +3,7 @@
 
 #include "dx_defines.h"
 #include <Windows.h>
-#include "input_interface.h"
+#include "dx_input_interface.h"
 
 
 class DxRenderer;

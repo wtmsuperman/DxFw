@@ -68,15 +68,9 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	GUISystem* guisys = GUISystem::getSingletonPtr();
 	guisys->initOnce(df);
 
-	GUILayout* layout = guisys->createLayout(0);
-	guisys->createFont("",15,false,15,0);
-	GUILabel* label = layout->createLabel(0,0,800,600,0,0);
-	label->setColor(0xffff0000);
-	label->setText("wo le ge fuck");
-	guisys->changeCurrentLayout(layout);
+	guisys->load("media/gui/dx.xml");
+	GUIButton* btn = (GUIButton*) guisys->getLayout(0)->getControlById(0);
 
-	GUIButton* btn = layout->createButton(0,100,128,32,1);
-	btn->setTexture("menu/startUp.png","menu/startDown.png","menu/startOver.png");
 	btn->setClickListener(fuck);
 
 	//GUIImage* img = layout->createImage(0,0,800,600,2);

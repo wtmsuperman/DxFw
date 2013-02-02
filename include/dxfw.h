@@ -5,5 +5,5 @@
 #include "dx_resource_manager.h"
 #include "dx_tiny_gui.h"
 #include "dx_vertex_structs.h"
-#include "input_interface.h"
+#include "dx_input_interface.h"
 #include "windows_util.h"

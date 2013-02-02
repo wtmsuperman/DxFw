@@ -1,6 +1,6 @@
 #ifndef __ME_D3D_INPUT__
 #define __ME_D3D_INPUT__
-#include "input_interface.h"
+#include "dx_input_interface.h"
 
 
 #define KEY_SIZE 256

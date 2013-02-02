@@ -5,6 +5,7 @@
 #include "dx_renderer.h"
 #include "dx_resource_manager.h"
 #include <vector>
+#include "scriptlib.h"
 
 class GUISystem;
 class GUILayout;
@@ -137,7 +138,8 @@ public:
 	int					getID() {return mID;}
 
 	void				destroyControl(int id);
-	bool				load(const char* fileName); // not finish
+	void				load(const char* fileName); 
+	void				load(const TiXmlElement* root);
 	void				processGUI(int x,int y,bool mouseDown);
 	void				render();
 private:
@@ -172,8 +174,8 @@ public:
 						~GUISystem(){ release();}
 	//initialize gui system,call it before use gui system
     void				initOnce(const DxFw& fw);
+	void				load(const char* xml);
 	GUILayout*			createLayout(int id);
-	GUILayout*			loadLayout(const char* layerFileName); // not finish
 	GUILayout*			getLayout(int id);
 	void				destroyLayout(int id);
 	GUILayout*			currentLayout() {return mCurrentLayout;}

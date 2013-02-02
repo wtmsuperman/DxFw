@@ -1,5 +1,44 @@
 #include "dx_tiny_gui.h"
 
+int getIntVal(const char* val,int base)
+{
+	if (val == 0)
+		return 0;
+
+	if (strchr(val,'.') != 0){
+		return int(atof(val) * base);
+	}else{
+		return atoi(val);
+	}
+}
+
+void parseControlAttribute(const TiXmlElement* element,GUIControl* out)
+{
+	assert(out != 0);
+	const TiXmlAttribute* attr = element->FirstAttribute();
+	
+	while (attr != 0){
+		if (strcmp("id",attr->Name()) == 0){
+			out->id = atoi(attr->Value());
+		}
+		else if (strcmp("x",attr->Name()) == 0){
+			out->x = getIntVal(attr->Value(),800);
+		}
+		else if (strcmp("y",attr->Name()) == 0){
+			out->y = getIntVal(attr->Value(),600);
+		}
+		else if (strcmp("width",attr->Name()) == 0){
+			out->width = getIntVal(attr->Value(),800);
+		}else if (strcmp("height",attr->Name()) == 0){
+			out->height = getIntVal(attr->Value(),600);
+		}
+		attr = attr->Next();
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 GUISystem::GUISystem()
 {
 	mCurrentLayout = 0;
@@ -150,6 +189,62 @@ DxFont* GUISystem::createFont(const char* fontName,int weight,bool italic,int si
 	return newfont;
 }
 
+void GUISystem::load(const char* file)
+{
+	TiXmlDocument doc(file);
+	if (!doc.LoadFile())
+	{
+		assert(false && "file does not exists or file format error");
+	}
+	TiXmlElement* root = doc.RootElement();
+	assert(root != 0 && strcmp("DxGUI",root->Value()) == 0);
+	std::cout << root->Value() << std::endl;
+
+	TiXmlElement* element = root->FirstChildElement();
+
+	while (element != 0)
+	{
+		if (strcmp("Font",element->Value()) == 0){
+			const TiXmlAttribute* attr = element->FirstAttribute();
+			int id,weight,size;
+			const char* name =0;
+			bool italic = false;
+			while (attr != 0)
+			{
+				if (strcmp("id",attr->Name())==0){
+					id = atoi(attr->Value());
+				}else if (strcmp("weight",attr->Name())==0){
+					weight = atoi(attr->Value());
+				}else if (strcmp("size",attr->Name())==0){
+					size = atoi(attr->Value());
+				}else if (strcmp("italic",attr->Name())==0){
+					if (strcmp("true",attr->Value())==0){
+						italic = true;
+					}
+				}else if (strcmp("name",attr->Name())==0){
+					name = attr->Value();
+				}
+				attr = attr->Next();
+			}
+			createFont(name,weight,italic,size,id);
+		}
+		else if (strcmp("Layout",element->Value()) ==0){
+			int id = atoi(element->Attribute("id"));
+			GUILayout* layout = createLayout(id);
+			const char* file = element->Attribute("file");
+			if (file != 0){
+				layout->load(element->Attribute("file"));
+			}else{
+				layout->load(element);
+			}
+			changeCurrentLayout(layout);
+		}
+
+		element = element->NextSiblingElement();
+	}
+}
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //
@@ -273,6 +368,78 @@ GUIControl* GUILayout::getControlById(int id)
 	return 0;
 }
 
+void GUILayout::load(const char* file)
+{
+	TiXmlDocument doc(file);
+	if (!doc.LoadFile())
+	{
+		assert(false && "file does not exists or file format error");
+	}
+	TiXmlElement* root = doc.RootElement();
+	assert(root != 0 && strcmp("DxGUI",root->Value()) == 0);
+	std::cout << root->Value() << std::endl;
+
+	TiXmlElement* element = root->FirstChildElement();
+
+	assert(strcmp("Layout",element->Value()) == 0 && "not a layout file");
+	assert(mID == atoi(element->Attribute("id")) && "id does not match");
+	load(element);
+}
+
+void GUILayout::load(const TiXmlElement* root)
+{
+	const TiXmlElement* element = root->FirstChildElement();
+	while (element != 0)
+	{
+		if (strcmp("Button",element->Value()) ==0){
+			GUIButton btn;
+			parseControlAttribute(element,&btn);
+			const char* up,*down,*over = 0;
+			const TiXmlElement* textureElement = element->FirstChildElement();
+			while (textureElement != 0){
+				if (strcmp("up",textureElement->Value()) ==0){
+					up = textureElement->Attribute("file");
+				}else if (strcmp("down",textureElement->Value()) ==0){
+					down = textureElement->Attribute("file");
+				}else if (strcmp("over",textureElement->Value()) ==0){
+					over = textureElement->Attribute("file");
+				}
+				textureElement = textureElement->NextSiblingElement();
+			}
+			GUIButton* newButton = createButton(btn.x,btn.y,btn.width,btn.height,btn.id);
+			newButton->setTexture(up,down,over);
+		}
+		else if (strcmp("Label",element->Value()) ==0){
+			GUILabel label;
+			parseControlAttribute(element,&label);
+			const char* text = element->Attribute("text");
+			int fontId = 0;
+			const char* fontStr = element->Attribute("font");
+			fontId = atoi(fontStr);
+			unsigned long color = 0xffffffff;
+			const char* colorStr = element->Attribute("color");
+			if (colorStr != 0){
+				color = strtoul(colorStr,0,16);
+			}
+			GUILabel* newLabel = createLabel(label.x,label.y,label.width,label.height,label.id,fontId);
+			newLabel->setText(text);
+			newLabel->setColor(color);
+		}
+		else if (strcmp("Image",element->Value()) ==0){
+			GUIImage img;
+			parseControlAttribute(element,&img);
+			const char* file = element->Attribute("file");
+			GUIImage* newImg = createImage(img.x,img.y,img.width,img.height,img.id);
+			newImg->setImage(file);
+		}
+		else
+		{
+			assert(false && "parse layout xml error");
+		}
+
+		element = element->NextSiblingElement();
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
