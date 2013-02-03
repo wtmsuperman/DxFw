@@ -1,8 +1,8 @@
-#include "dx_dxfw.h"
-#include "dx_renderer.h"
-#include "dx_resource_manager.h"
-#include "dx_d3d_input.h"
-#include "dx_input_interface.h"
+#include "dx/dx_dxfw.h"
+#include "dx/dx_renderer.h"
+#include "dx/dx_resource_manager.h"
+#include "dx/dx_d3d_input.h"
+#include "dx/dx_input_interface.h"
 
 #pragma comment(lib,"d3d9.lib")
 #pragma comment(lib,"d3dx9.lib")

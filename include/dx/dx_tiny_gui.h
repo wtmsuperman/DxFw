@@ -1,11 +1,11 @@
 #ifndef __DX_TINY_GUI__
 #define __DX_TINY_GUI__
 
-#include "dx_dxfw.h"
-#include "dx_renderer.h"
-#include "dx_resource_manager.h"
+#include "dx/dx_dxfw.h"
+#include "dx/dx_renderer.h"
+#include "dx/dx_resource_manager.h"
 #include <vector>
-#include "scriptlib.h"
+#include "script/scriptlib.h"
 
 class GUISystem;
 class GUILayout;
@@ -186,15 +186,17 @@ public:
 	
 	// render current layout
 	// current layout could change by call changeCurrentLayout(int id);
-	void				render() { mCurrentLayout->render(); }
+	void				render() {if (mCurrentLayout!=0) mCurrentLayout->render(); }
 	// process gui
-	void				processGUI(int x,int y,bool mouseDown) { mCurrentLayout->processGUI(x,y,mouseDown);}
+	void				processGUI(int x,int y,bool mouseDown) {if (mCurrentLayout!=0) mCurrentLayout->processGUI(x,y,mouseDown);}
 	//release befor frame work
 	void				release();
 
 	DxFont*				createFont(const char* fontName,int weight,bool italic,int size,int id);
 	DxFont*				getFontByID(int id);
 	void				releaseFont(int id);
+
+	const DxParam*		getDxParam() const {return mDxParam;}
 
 	static inline GUISystem*	getSingletonPtr();
 
@@ -206,6 +208,7 @@ private:
 	
 	GUILayout*				mCurrentLayout;
 	DxRenderer*				mRenderer;
+	const DxParam*			mDxParam;
 	IDirect3DDevice9*		mDevice;
 	DxResourceManager*		mResourceMgr;
 	LayoutContainer			mLayouts;

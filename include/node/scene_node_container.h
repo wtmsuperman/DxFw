@@ -2,7 +2,7 @@
 #define __SCENE_NODE_CONTAINER__
 
 #include <map>
-#include "dx_renderer.h"
+#include "dx/dx_renderer.h"
 
 class SceneNode;
 

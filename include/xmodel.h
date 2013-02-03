@@ -1,8 +1,8 @@
 #ifndef __XModel__
 #define __XModel__
 
-#include "dx_resource.h"
-#include "dx_renderer.h"
+#include "dx/dx_resource.h"
+#include "dx/dx_renderer.h"
 
 class XModel : public IRenderable
 {

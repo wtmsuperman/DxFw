@@ -1,8 +1,8 @@
 #ifndef __SCENE_NODE__
 #define __SCENE_NODE__
 
-#include "dx_renderer.h"
-#include "node.h"
+#include "dx/dx_renderer.h"
+#include "node/node.h"
 
 class SceneNode : public Node , public IRenderable
 {

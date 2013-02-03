@@ -1,9 +1,10 @@
 //#include "dxfw.h"
 #include <Windows.h>
-#include "dxfw.h"
+#include "dx/dxfw.h"
 #include "xmodel.h"
-#include "scene_node.h"
-#include "scene_node_container.h"
+#include "node/scene_node.h"
+#include "node/scene_node_container.h"
+#include "route/route.h"
 
 void fuck(int id)
 {
@@ -68,10 +69,11 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	GUISystem* guisys = GUISystem::getSingletonPtr();
 	guisys->initOnce(df);
 
-	guisys->load("media/gui/dx.xml");
-	GUIButton* btn = (GUIButton*) guisys->getLayout(0)->getControlById(0);
+	Route r(new LinearPath(Vector3::ZERO,Vector3(0.0f,0.0f,0.01f),2.0));
+	//guisys->load("media/gui/dx.xml");
+	//GUIButton* btn = (GUIButton*) guisys->getLayout(0)->getControlById(0);
 
-	btn->setClickListener(fuck);
+	//btn->setClickListener(fuck);
 
 	//GUIImage* img = layout->createImage(0,0,800,600,2);
 	//img->setImage("menu/mainMenu.jpg");
@@ -80,12 +82,13 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	{
 		DxRenderer* renderer = df.getRenderer();
 		renderer->clear(true,true,true,0xff000000);
+
 		Matrix4x4 v;
 		camera.generateParentToLocalMatrix(&v);
 		renderer->setViewMatrix(v);
 		renderer->render(&c);
-		guisys->render();
 		
+		guisys->render();
 
 		//n->yaw(getTimeSinceLastFrame() * 1.0f);
 		float timeDelta = getTimeSinceLastFrame();
@@ -115,9 +118,14 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		}
 		n->translate(walk,Node::TS_PARENT);
 
+		//Vector3 ani;
+		//r.calcDelta(timeDelta,&ani);
+		//n->translate(ani,Node::TS_LOCAL);
+
 		isys->capture();
 		Point p = isys->getMouseClientPosition();
 		guisys->processGUI(p.x,p.y,isys->mouseButtonDown(0));
+
 		renderer->present();
 
 		messagePump(&msg);

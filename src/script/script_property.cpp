@@ -1,4 +1,4 @@
-#include "script_property.h"
+#include "script/script_property.h"
 #include <fstream>
 
 #define SCRIPT_VAL_TYPE unsigned char

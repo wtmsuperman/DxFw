@@ -1,4 +1,4 @@
-#include "dx_tiny_gui.h"
+#include "dx/dx_tiny_gui.h"
 
 int getIntVal(const char* val,int base)
 {
@@ -12,7 +12,7 @@ int getIntVal(const char* val,int base)
 	}
 }
 
-void parseControlAttribute(const TiXmlElement* element,GUIControl* out)
+void parseControlAttribute(const TiXmlElement* element,GUIControl* out,int width,int height)
 {
 	assert(out != 0);
 	const TiXmlAttribute* attr = element->FirstAttribute();
@@ -22,15 +22,15 @@ void parseControlAttribute(const TiXmlElement* element,GUIControl* out)
 			out->id = atoi(attr->Value());
 		}
 		else if (strcmp("x",attr->Name()) == 0){
-			out->x = getIntVal(attr->Value(),800);
+			out->x = getIntVal(attr->Value(),width);
 		}
 		else if (strcmp("y",attr->Name()) == 0){
-			out->y = getIntVal(attr->Value(),600);
+			out->y = getIntVal(attr->Value(),height);
 		}
 		else if (strcmp("width",attr->Name()) == 0){
-			out->width = getIntVal(attr->Value(),800);
+			out->width = getIntVal(attr->Value(),width);
 		}else if (strcmp("height",attr->Name()) == 0){
-			out->height = getIntVal(attr->Value(),600);
+			out->height = getIntVal(attr->Value(),height);
 		}
 		attr = attr->Next();
 	}
@@ -55,6 +55,7 @@ void GUISystem::initOnce(const DxFw& df)
 		mResourceMgr = df.getResourceManager();
 		mRenderer = df.getRenderer();
 		mDevice = df.getDevice();
+		mDxParam = df.getDxParam();
 		flag = false;
 	}
 	else
@@ -237,11 +238,12 @@ void GUISystem::load(const char* file)
 			}else{
 				layout->load(element);
 			}
-			changeCurrentLayout(layout);
 		}
 
 		element = element->NextSiblingElement();
 	}
+
+	changeCurrentLayout(mLayouts.at(0));
 }
 
 
@@ -389,11 +391,14 @@ void GUILayout::load(const char* file)
 void GUILayout::load(const TiXmlElement* root)
 {
 	const TiXmlElement* element = root->FirstChildElement();
+	const DxParam* dxparam = GUISystem::getSingletonPtr()->getDxParam();
+	int width = dxparam->width;
+	int height = dxparam->height;
 	while (element != 0)
 	{
 		if (strcmp("Button",element->Value()) ==0){
 			GUIButton btn;
-			parseControlAttribute(element,&btn);
+			parseControlAttribute(element,&btn,width,height);
 			const char* up,*down,*over = 0;
 			const TiXmlElement* textureElement = element->FirstChildElement();
 			while (textureElement != 0){
@@ -411,7 +416,7 @@ void GUILayout::load(const TiXmlElement* root)
 		}
 		else if (strcmp("Label",element->Value()) ==0){
 			GUILabel label;
-			parseControlAttribute(element,&label);
+			parseControlAttribute(element,&label,width,height);
 			const char* text = element->Attribute("text");
 			int fontId = 0;
 			const char* fontStr = element->Attribute("font");
@@ -427,7 +432,7 @@ void GUILayout::load(const TiXmlElement* root)
 		}
 		else if (strcmp("Image",element->Value()) ==0){
 			GUIImage img;
-			parseControlAttribute(element,&img);
+			parseControlAttribute(element,&img,width,height);
 			const char* file = element->Attribute("file");
 			GUIImage* newImg = createImage(img.x,img.y,img.width,img.height,img.id);
 			newImg->setImage(file);
@@ -528,8 +533,10 @@ void GUIImage::setImage(const char* img)
 
 void GUIImage::onRender(DxRenderer* renderer)
 {
+	renderer->enableTransparent();
 	renderer->applyTexture(0,mImage);
 	renderer->render(mBuffer);
+	renderer->disableTransparent();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

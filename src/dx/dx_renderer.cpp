@@ -1,4 +1,4 @@
-#include "dx_renderer.h"
+#include "dx/dx_renderer.h"
 
 DxRenderer::DxRenderer(IDirect3DDevice9* device)
 	:mDevice(device)

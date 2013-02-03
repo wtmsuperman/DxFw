@@ -1,5 +1,5 @@
-#include "scene_node_container.h"
-#include "scene_node.h"
+#include "node/scene_node_container.h"
+#include "node/scene_node.h"
 
 void SceneNodeContainer::onRender(DxRenderer* renderer)
 {

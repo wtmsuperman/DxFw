@@ -1,4 +1,4 @@
-#include "dx_resource_manager.h"
+#include "dx/dx_resource_manager.h"
 
 const char* DEFAULT_GROUP_NAME = "default";
 
