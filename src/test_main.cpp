@@ -5,11 +5,18 @@
 #include "node/scene_node.h"
 #include "node/scene_node_container.h"
 #include "route/route.h"
+#include "node/node_action.h"
 
 void fuck(int id)
 {
 	MessageBox(0,"h","",MB_OK);
 }
+
+class Spaceship
+{
+public:
+	SceneNode* node;
+};
 
 
 int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
@@ -69,7 +76,10 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	GUISystem* guisys = GUISystem::getSingletonPtr();
 	guisys->initOnce(df);
 
-	Route r(new LinearPath(Vector3::ZERO,Vector3(0.0f,0.0f,0.01f),2.0));
+	Route r(new LinearPathRel(Vector3(10.0f,0.0f,10.0f),0.5),true);
+	r.addPath(new LinearPathRel(Vector3(-10.0f,0.0f,10.0f),0.5));
+
+	TranslateToAction action(n,Vector3(10.0f,0.0f,0.0f),1.0,Node::TS_PARENT);
 	//guisys->load("media/gui/dx.xml");
 	//GUIButton* btn = (GUIButton*) guisys->getLayout(0)->getControlById(0);
 
@@ -119,8 +129,10 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		n->translate(walk,Node::TS_PARENT);
 
 		//Vector3 ani;
-		//r.calcDelta(timeDelta,&ani);
-		//n->translate(ani,Node::TS_LOCAL);
+		//r.calcPosition(timeDelta,&ani);
+		//n->translate(ani,Node::TS_PARENT);
+
+		action.act(timeDelta);
 
 		isys->capture();
 		Point p = isys->getMouseClientPosition();
