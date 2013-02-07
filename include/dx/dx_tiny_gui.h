@@ -6,17 +6,10 @@
 #include "dx/dx_resource_manager.h"
 #include <vector>
 #include "script/scriptlib.h"
+#include "dx_vertex_structs.h"
 
 class GUISystem;
 class GUILayout;
-
-struct GUIVertex
-{
-	float x,y,z,rhw;
-	float u,v;
-	static const DWORD GUI_FVF = D3DFVF_XYZRHW | D3DFVF_TEX1;
-};
-
 
 
 struct GUIControl : IRenderable

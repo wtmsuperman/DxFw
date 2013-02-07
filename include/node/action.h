@@ -29,7 +29,12 @@ public:
 	virtual ~ParallelAction()
 	{
 		if (mActions != 0)
+		{
+			for (size_t i=0; i<mActionSize; ++i){
+				delete mActions[i];
+			}
 			free(mActions);
+		}
 	}
 
 	virtual bool act(float delta)

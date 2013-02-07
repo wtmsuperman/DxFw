@@ -7,12 +7,14 @@
 #include <d3d9.h>
 #include <mathlib.h>
 #include <dinput.h>
-
-
-
 #include <assert.h>
 
 #define MAX_TEXTURE 1
+
+typedef unsigned long DxColor32;
+
+typedef D3DCOLORVALUE	DxColor;
+
 
 //call the Release() member function
 
@@ -63,6 +65,11 @@ struct ltstr
   {  
     return strcmp(s1, s2) < 0;  
   }  
-};  
+};
+
+inline DWORD FtoDW(float f)
+{
+	return *((DWORD*)(&f));
+}
 
 #endif

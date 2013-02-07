@@ -2,7 +2,6 @@
 #define __DX_VERTEX_STRUCT__
 
 #include "dx_defines.h"
-#include <mathlib.h>
 
 typedef struct stColorVertex
 {
@@ -41,5 +40,27 @@ typedef struct stTexVertex
 	static const DWORD FVF = D3DFVF_XYZ | D3DFVF_TEX1;
 }
 TexVertex;
+
+typedef struct stParticleVertex
+{
+	float			x,y,z;
+	DxColor32		color;
+	float			size;
+
+	stParticleVertex(const Vector3& v,unsigned long Color,float Size)
+		:x(v.x),y(v.y),z(v.z),color(Color),size(Size)
+	{}
+
+	static const DWORD FVF = D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_PSIZE;
+}
+ParticleVertex;
+
+typedef struct stGUIVertex
+{
+	float x,y,z,rhw;
+	float u,v;
+	static const DWORD GUI_FVF = D3DFVF_XYZRHW | D3DFVF_TEX1;
+}
+GUIVertex;
 
 #endif;
