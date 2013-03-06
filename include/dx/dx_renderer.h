@@ -32,6 +32,7 @@ public:
 	inline void			present();
 	inline void			setFillMode(D3DFILLMODE mode);
 	inline void			setRenderState(D3DRENDERSTATETYPE state,DWORD value);
+	inline void			setTextureStageState(DWORD stage,D3DTEXTURESTAGESTATETYPE type,DWORD value);
 
 	inline void			enableLight(bool enable);
 
@@ -95,6 +96,11 @@ void DxRenderer::setFillMode(D3DFILLMODE mode)
 void DxRenderer::setRenderState(D3DRENDERSTATETYPE state,DWORD value)
 {
 	mDevice->SetRenderState(state,value);
+}
+
+void DxRenderer::setTextureStageState(DWORD stage,D3DTEXTURESTAGESTATETYPE type,DWORD value)
+{
+	mDevice->SetTextureStageState(stage,type,value);
 }
 
 void DxRenderer::enableLight(bool enable)

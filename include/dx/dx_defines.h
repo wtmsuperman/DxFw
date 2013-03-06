@@ -11,9 +11,9 @@
 
 #define MAX_TEXTURE 1
 
-typedef unsigned long DxColor32;
+typedef unsigned long	DxColor32;
 
-typedef D3DCOLORVALUE	DxColor;
+typedef D3DXCOLOR		DxColor;
 
 
 //call the Release() member function

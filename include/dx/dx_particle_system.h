@@ -4,6 +4,7 @@
 #include "dx_defines.h"
 #include "dx_renderer.h"
 #include "dx_vertex_structs.h"
+#include "dx_dxfw.h"
 
 #include <vector>
 #include <queue>
@@ -25,21 +26,10 @@ struct DxParticleAttribute
 class DxEmitter
 {
 public:
-	enum EmitterType
-	{
-		EMT_POINT,
-		EMT_AABB
-	};
-
 	typedef std::vector<DxColor> ColorContaner;
 
-	/*
-	if the EmitterType is EMT_POINT,then a for postion,b is nothing;
-	if the EmitterType is EMT_AABB,	then a for min,	   b for max
-	*/
-	Vector3			a;
-	Vector3			b;
-	
+	Vector3			minPosition;
+	Vector3			maxPosition;
 	Vector3			maxVelocity;
 	Vector3			minVelocity;
 	Vector3			maxAcceleartion;
@@ -50,7 +40,7 @@ public:
 
 	float			duration;
 	float			emitRate;
-	EmitterType		type;
+	float			size;
 
 	virtual void createParticle(DxParticleAttribute* out) const;
 };
@@ -58,33 +48,50 @@ public:
 class DxParticleSystem : public IRenderable
 {
 public:
-	DxParticleSystem(IDirect3DDevice9* device,size_t maxSize);
+	DxParticleSystem();
 	~DxParticleSystem();
 
+	bool init(DxFw* fw,size_t maxSize,const char* tex);
 	void release();
 	void setEmitter(const DxEmitter* emitter);
 	bool add();
 	bool isAlive() const;
 
+	void setVertexBufferAttribute(DWORD vbsize,DWORD batchSize);
+
 	void setBoundingBox(const AABB3& boundingbox);
 	const AABB3& getBoundingBox() const {return mBoundingBox;}
 
+	size_t size();
+
 	virtual void preRender(DxRenderer* renderer);
 	virtual void onRender(DxRenderer* renderer);
-	virtual void postRenderer(DxRenderer* renderer);
+	virtual void postRender(DxRenderer* renderer);
 
 	virtual bool update(float delta);
 	
 private:
 	typedef std::queue<size_t> FreeIndexQueue;
-
-	IDirect3DDevice9*		mDevice;
+	
+	DxFw*					mDxFw;
 	size_t					mMaxSize;
 	DxParticleAttribute*	mAttributes;
-	const DxEmitter*		mEmitter;
+	DxEmitter				mEmitter;
 	float					mInvsEmitRate;
 	FreeIndexQueue			mFreeIndexQueue;
 	AABB3					mBoundingBox;
+
+private:
+	
+	DxTexture*					mTex;
+	IDirect3DVertexBuffer9*		mVb;
+	DWORD						mVbSize;
+	DWORD						mVbOffset;
+	DWORD						mVbBatchSize;
+
+private:
+	DWORD	tLight; // temporary saving lighting value
+
 };
 
 bool loadParticleSystem(DxParticleSystem* ps,DxEmitter* emitter,const char* file);

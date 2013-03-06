@@ -36,11 +36,16 @@ public:
 	bool				initInput(HWND hwnd,HINSTANCE hist,bool exclusive);
 	void				release();
 
+	DxRenderer*			getRenderer() {return mRenderer;}
+	DxResourceManager*	getResourceManager() {return mResourceMgr;}
+	IDirect3DDevice9*	getDevice() {return mDevice;}
+	IInputSystem*		getInputSystem() {return mInputSys;}
+	const DxParam*		getDxParam() const {return &mDxParam;}
+
 	DxRenderer*			getRenderer() const {return mRenderer;}
 	DxResourceManager*	getResourceManager() const {return mResourceMgr;}
 	IDirect3DDevice9*	getDevice() const {return mDevice;}
 	IInputSystem*		getInputSystem() const {return mInputSys;}
-	const DxParam*		getDxParam() const {return &mDxParam;}
 private:
 	DxRenderer*			mRenderer;
 	DxResourceManager*	mResourceMgr;

@@ -45,13 +45,12 @@ typedef struct stParticleVertex
 {
 	float			x,y,z;
 	DxColor32		color;
-	float			size;
 
-	stParticleVertex(const Vector3& v,unsigned long Color,float Size)
-		:x(v.x),y(v.y),z(v.z),color(Color),size(Size)
+	stParticleVertex(const Vector3& v,unsigned long Color)
+		:x(v.x),y(v.y),z(v.z),color(Color)
 	{}
 
-	static const DWORD FVF = D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_PSIZE;
+	static const DWORD FVF = D3DFVF_XYZ | D3DFVF_DIFFUSE ;
 }
 ParticleVertex;
 

@@ -26,7 +26,10 @@ public:
 		}
 	}
 
-	virtual ~TranslateToAction(){}
+	virtual ~TranslateToAction()
+	{
+		safe_delete(path);
+	}
 
 	virtual bool act(float delta)
 	{

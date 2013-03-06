@@ -7,7 +7,9 @@ void SceneNodeContainer::onRender(DxRenderer* renderer)
 	NodeIter end = mNodes.end();
 	for (NodeIter iter = mNodes.begin(); iter != end; ++iter)
 	{
+		iter->second->preRender(renderer);
 		iter->second->onRender(renderer);
+		iter->second->postRender(renderer);
 	}
 	renderer->endScene();
 }
