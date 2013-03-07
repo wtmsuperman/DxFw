@@ -28,7 +28,19 @@ void DxParticleEmitter::genColor(DxColorValue* color)
 
 void DxParticleEmitter::genDirection(Vector3* dir)
 {
-	*dir = direction;
+	 if (angle != 0.0f)
+     {
+            // Randomise angle
+            float tangle = randf() * angle;
+
+            // Randomise direction
+            *dir = direction.randomDeviant(degreeToRadians(tangle), up);
+        }
+        else
+        {
+            // Constant angle
+            *dir = direction;
+        }
 }
 
 void DxParticleEmitter::genPosition(Vector3* pos)
@@ -215,6 +227,7 @@ void DxParticleSystem::preRender(DxRenderer* renderer)
 {
 	renderer->getDevice()->GetRenderState(D3DRS_LIGHTING,&tLight);
 	renderer->setRenderState(D3DRS_LIGHTING,false);
+	renderer->setRenderState(D3DRS_ZWRITEENABLE,false);
 	renderer->setRenderState(D3DRS_POINTSPRITEENABLE,true);
 	renderer->setRenderState(D3DRS_POINTSCALEENABLE,true);
 	renderer->setRenderState(D3DRS_POINTSIZE,FtoDW(mEmitter.size));
@@ -231,6 +244,7 @@ void DxParticleSystem::preRender(DxRenderer* renderer)
 
 void DxParticleSystem::postRender(DxRenderer* renderer)
 {
+	renderer->setRenderState(D3DRS_ZWRITEENABLE,true);
 	renderer->setRenderState(D3DRS_POINTSPRITEENABLE,false);
 	renderer->setRenderState(D3DRS_POINTSCALEENABLE,false);
 	renderer->setRenderState(D3DRS_LIGHTING,tLight);

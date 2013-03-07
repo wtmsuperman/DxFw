@@ -8,6 +8,7 @@
 #include "node/node_action.h"
 #include "dx/dx_particle_system.h"
 #include "dx/dx_logging.h"
+#include <time.h>
 
 void fuck(int id)
 {
@@ -23,6 +24,7 @@ public:
 
 int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 {
+	srand((unsigned int)time(0));
 	WinInfo info;
 	if (!initWindow(800,600,false,"my game",hist,&info))
 	{
@@ -103,17 +105,19 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	DxColorValue t = {1.0f,0.2f,0.0f,1.0f};
 	em.colorBegine = t;
 	em.colorEnd = t;
+	em.angle = 180.0f;
+	em.up = Vector3::UNIT_Y;
 	em.direction = Vector3::UNIT_Z;
-	em.duration = 0.0f;
-	em.emitRate = 500.0f;
-	em.maxPosition = Vector3(10.0f,0.0f,2.0f);
+	em.duration = 0.1f;
+	em.emitRate = 1000.0f;
+	em.maxPosition = Vector3(10.0f,10.0f,2.0f);
 	em.minPosition = Vector3(-10.0f,0.0f,-1.0f);
-	em.minVelocity = 1.0f;
-	em.maxVelocity = 10.0f;
-	em.maxTimeLL = 3.0f;
+	em.minVelocity = 50.0f;
+	em.maxVelocity = 80.0f;
+	em.maxTimeLL = 2.0f;
 	em.minTimeLL = 1.0f;
-	em.size = 2.0f;
-	em.currentTime = 3.0f;
+	em.size = 3.0f;
+	em.currentTime = em.duration;
 	
 	ps.setEmitter(em);
 	//logToScreen("p","fuck");

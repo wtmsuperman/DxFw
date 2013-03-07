@@ -28,6 +28,8 @@ public:
 	float			emitRate;
 	float			size;
 
+	float			angle;
+
 	float			maxVelocity;
 	float			minVelocity;
 	float			currentTime;
@@ -39,6 +41,7 @@ public:
 	Vector3			maxPosition;
 
 	Vector3			direction;
+	Vector3			up; // Notional up vector, used to speed up generation of variant directions, and also to orient some emitters.
 
 	virtual void initParticle(DxParticleAttribute* p);
 
