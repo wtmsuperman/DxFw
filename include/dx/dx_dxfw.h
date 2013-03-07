@@ -46,6 +46,7 @@ public:
 	DxResourceManager*	getResourceManager() const {return mResourceMgr;}
 	IDirect3DDevice9*	getDevice() const {return mDevice;}
 	IInputSystem*		getInputSystem() const {return mInputSys;}
+
 private:
 	DxRenderer*			mRenderer;
 	DxResourceManager*	mResourceMgr;

@@ -14,6 +14,7 @@
 typedef unsigned long	DxColor32;
 
 typedef D3DXCOLOR		DxColor;
+typedef D3DCOLORVALUE	DxColorValue;
 
 
 //call the Release() member function

@@ -479,7 +479,7 @@ void GUILabel::setText(const char* text)
 void GUILabel::printf(const char* s,...)
 {
 	safe_deleteArray(mText);
-	mText = new char[512];
+	mText = new char[1024];
 	va_list var;
 	va_start(var,s);
 	vsprintf(mText,s,var);
@@ -512,7 +512,7 @@ void GUILabel::onRender(DxRenderer* renderer)
 	assert(dxfont != 0 && "font id error");
 	ID3DXFont* font = dxfont->font;
 	RECT rect = {x,y,x+width,y+height};
-	font->DrawTextA(0,mText,-1,&rect,DT_SINGLELINE | DT_TOP | DT_LEFT,mColor);
+	font->DrawTextA(0,mText,-1,&rect,DT_TOP | DT_LEFT,mColor);
 }
 
 void GUILabel::postRender(DxRenderer* renderer)

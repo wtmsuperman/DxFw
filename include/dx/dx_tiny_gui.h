@@ -78,7 +78,9 @@ class GUILabel : public GUIControl
 public:
 	GUILabel();
 	~GUILabel();
-	void	setText(const char* text);
+	void			setText(const char* text);
+	char*			getText() { return mText;}
+	const char*		getText() const { return mText;}
 
 	//
 	//maybe unsafe,run like sprintf,but the max char array size is 1024

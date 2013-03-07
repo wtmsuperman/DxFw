@@ -1,20 +1,71 @@
 #include "dx/dx_particle_system.h"
 #include "dx/dx_resource_manager.h"
+#include "dx/dx_logging.h"
 
-void DxEmitter::createParticle(DxParticleAttribute* out) const
+//
+// Particle Emitter
+//
+
+void DxParticleEmitter::initParticle(DxParticleAttribute* p)
 {
-	out->velocity = randVector3(minVelocity,maxVelocity);
-	out->acceleration = randVector3(minAcceleartion,maxAcceleartion);
-	out->colorFade = colorFade;
-	out->duration = duration;
-	out->isAlive = true;
-	out->currentTime = 0.0f;
+	genColor(&p->color);
+	genPosition(&p->position);
+	genTimeToLive(&p->timeToLive);
+	float vel;
+	Vector3 dir;
+	genVelocity(&vel);
+	genDirection(&dir);
+	p->velocity = dir * vel;
+}
 
-	size_t size = colorArray.size();
-	size_t i = randl(0,size);
-	out->color = colorArray[i];
+void DxParticleEmitter::genColor(DxColorValue* color)
+{
+	color->a = randf(colorBegine.a,colorEnd.a);
+	color->b = randf(colorBegine.b,colorEnd.b);
+	color->g = randf(colorBegine.g,colorEnd.g);
+	color->r = randf(colorBegine.r,colorEnd.r);
+}
 
-	out->position = randVector3(minPosition,maxPosition);
+void DxParticleEmitter::genDirection(Vector3* dir)
+{
+	*dir = direction;
+}
+
+void DxParticleEmitter::genPosition(Vector3* pos)
+{
+	*pos = randVector3(minPosition,maxPosition);
+}
+
+void DxParticleEmitter::genVelocity(float* vel)
+{
+	*vel = randf(minVelocity,maxVelocity);
+}
+
+void DxParticleEmitter::genTimeToLive(float* time)
+{
+	*time = randf(minTimeLL,maxTimeLL);
+}
+
+unsigned short DxParticleEmitter::genEmissionCount(float time)
+{
+	if (enable)
+	{
+		static float remainder = 0.0f;
+		remainder += emitRate * time;
+        unsigned short intRequest = (unsigned short)remainder;
+        remainder -= intRequest;
+
+		if (duration)
+		{
+			currentTime -= time;
+			if (currentTime <= 0.0f)
+			{
+				enable = false;
+			}
+		}
+		return intRequest;
+	}
+	return 0;
 }
 
 //
@@ -35,16 +86,15 @@ DxParticleSystem::DxParticleSystem()
 
 bool DxParticleSystem::init(DxFw* fw,size_t maxSize,const char* tex)
 {
-	mAttributes = new DxParticleAttribute[maxSize];
-	if (mAttributes == 0)
+	mParticlePool = new DxParticleAttribute[maxSize];
+	if (mParticlePool == 0)
 		return false;
 
 	mDxFw = fw;
 	mMaxSize = maxSize;
 
-	for (size_t i=0; i<maxSize; ++i)
-	{
-		mFreeIndexQueue.push(i);
+	for (size_t i=0;i < maxSize; ++i){
+		mFreeParticles.push_back(&mParticlePool[i]);
 	}
 
 	if (FAILED(fw->getDevice()->CreateVertexBuffer(mVbSize * sizeof(ParticleVertex)
@@ -64,75 +114,90 @@ bool DxParticleSystem::init(DxFw* fw,size_t maxSize,const char* tex)
 
 DxParticleSystem::~DxParticleSystem()
 {
-	safe_Release(mVb);
-	if (mTex)
-		mDxFw->getResourceManager()->releaseTexture("particle",mTex->name);
-	safe_deleteArray(mAttributes);
+	release();
 }
 
 bool DxParticleSystem::update(float delta)
 {
-	static float current = 0.0f;
-	size_t size = mMaxSize - mFreeIndexQueue.size();
-	for (size_t i=0; i<size; ++i)
+	ActiveParticleListIter end = mActiveParticles.end();
+	AffectorListIter afend = mAffectors.end();
+	for (ActiveParticleListIter iter=mActiveParticles.begin(); iter != end;)
 	{
-		DxParticleAttribute& p = mAttributes[i];
-		if (p.isAlive)
+		DxParticleAttribute* p = *iter;
+		if (p->timeToLive < delta || !mBoundingBox.cantains(p->position))
 		{
-			p.position += p.velocity * delta;
-			p.velocity += p.acceleration * delta;
-			p.currentTime += delta;
-			p.color.r += p.colorFade.r * delta;
-			p.color.g += p.colorFade.g * delta;
-			p.color.b += p.colorFade.b * delta;
-			p.color.a += p.colorFade.a * delta;
-			if (p.currentTime >= p.duration || !mBoundingBox.cantains(p.position))
-			{
-				p.isAlive = false;
-				mFreeIndexQueue.push(i);
+			mFreeParticles.splice(mFreeParticles.end(),mActiveParticles,iter++);
+		}
+		else
+		{
+			p->position += p->velocity * delta;
+			p->timeToLive -= delta;
+			for (AffectorListIter ai=mAffectors.begin(); ai != afend; ++ai){
+				(*ai)->affect(p,delta);
 			}
+			++iter;
 		}
 	}
 
-	current += delta;
-	//add();
-	if (current >= mInvsEmitRate)
-	{
-		current = 0.0f;
-		add();
-	}
-
+	add(delta);
+	logToScreen("particle","%d",mActiveParticles.size());
 	return true;
 }
 
 bool DxParticleSystem::isAlive() const
 {
-	return mFreeIndexQueue.size() == mMaxSize;
+	return !mActiveParticles.empty();
 }
 
-size_t DxParticleSystem::size()
+void DxParticleSystem::setEmitter(const DxParticleEmitter& emitter)
 {
-	return mMaxSize - mFreeIndexQueue.size();
+	this->mEmitter = emitter;
 }
 
-void DxParticleSystem::setEmitter(const DxEmitter* emitter)
+void DxParticleSystem::addAffector(DxParticleAffector* affector)
 {
-	this->mEmitter = *emitter;
-	this->mInvsEmitRate = 1.0f / (emitter->emitRate * 1000.0f);
+	this->mAffectors.push_back(affector);
 }
 
-bool DxParticleSystem::add()
+bool DxParticleSystem::add(float timeDelta)
 {
-	if (mFreeIndexQueue.empty())
+	unsigned short r =  mEmitter.genEmissionCount(timeDelta);
+	//logToScreen("r","%d",r);
+	if (r == 0)
 		return false;
-	mEmitter.createParticle(&mAttributes[mFreeIndexQueue.front()]);
-	mFreeIndexQueue.pop();
+
+	float timePoint = 0.0f;
+	float timeInc = timeDelta / r;
+
+	AffectorListIter afend = mAffectors.end();
+	while ( r > 0 && !mFreeParticles.empty())
+	{
+		DxParticleAttribute* p = mFreeParticles.front();
+		
+		mEmitter.initParticle(p);
+
+		//这里需要更改
+		//p->position;
+		//p->velocity = mEmitter.direction * randf(mEmitter.minVelocity,mEmitter.maxVelocity);
+
+		mFreeParticles.pop_front();
+		
+		for (AffectorListIter ai=mAffectors.begin(); ai != afend; ++ai){
+			(*ai)->init(p);
+		}
+
+		p->position += p->velocity * timePoint;
+		timePoint += timeInc;
+
+		mActiveParticles.push_back(p);
+		r--;
+	}
 	return true;
 }
 
 void DxParticleSystem::release()
 {
-	safe_deleteArray(mAttributes);
+	safe_deleteArray(mParticlePool);
 }
 
 void DxParticleSystem::setBoundingBox(const AABB3& box)
@@ -174,11 +239,13 @@ void DxParticleSystem::postRender(DxRenderer* renderer)
 
 void DxParticleSystem::onRender(DxRenderer* renderer)
 {
-	size_t size = mMaxSize - mFreeIndexQueue.size();
-	if (size > 0)
+	
+	if (!mActiveParticles.empty())
 	{
 		renderer->applyTexture(0,mTex);
+
 		IDirect3DDevice9* device = renderer->getDevice();
+
 		device->SetFVF(ParticleVertex::FVF);
 		device->SetStreamSource(0,mVb,0,sizeof(ParticleVertex));
 
@@ -193,13 +260,13 @@ void DxParticleSystem::onRender(DxRenderer* renderer)
 			,mVbOffset ? D3DLOCK_NOOVERWRITE : D3DLOCK_DISCARD);
 
 		DWORD numParticleInBatch = 0;
-		for (size_t i=0; i<size; ++i){
-			DxParticleAttribute* p = &mAttributes[i];
-			if (p->isAlive){
+		ActiveParticleListIter end = mActiveParticles.end();
+		for (ActiveParticleListIter iter=mActiveParticles.begin(); iter != end; ++iter){
+			DxParticleAttribute* p = *iter;
 				v->x = p->position.x;
 				v->y = p->position.y;
 				v->z = p->position.z;
-				v->color = (D3DCOLOR)(p->color);
+				v->color = D3DCOLOR_COLORVALUE(p->color.r,p->color.g,p->color.b,p->color.r);
 				++v;
 				++numParticleInBatch;
 
@@ -215,7 +282,6 @@ void DxParticleSystem::onRender(DxRenderer* renderer)
 					mVb->Lock(mVbOffset*sizeof(ParticleVertex),mVbBatchSize*sizeof(ParticleVertex),(void**)&v,mVbOffset ? D3DLOCK_NOOVERWRITE : D3DLOCK_DISCARD);
 					numParticleInBatch = 0;
 				}
-			}
 		}
 
 		mVb->Unlock();

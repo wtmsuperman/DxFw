@@ -7,6 +7,7 @@
 #include "route/route.h"
 #include "node/node_action.h"
 #include "dx/dx_particle_system.h"
+#include "dx/dx_logging.h"
 
 void fuck(int id)
 {
@@ -77,10 +78,10 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	GUISystem* guisys = GUISystem::getSingletonPtr();
 	guisys->initOnce(df);
 
-	Route r(new LinearPathRel(Vector3(10.0f,0.0f,10.0f),0.5),true);
-	r.addPath(new LinearPathRel(Vector3(-10.0f,0.0f,10.0f),0.5));
+	//Route r(new LinearPathRel(Vector3(10.0f,0.0f,10.0f),0.5),true);
+	//r.addPath(new LinearPathRel(Vector3(-10.0f,0.0f,10.0f),0.5));
 
-	TranslateToAction action(n,Vector3(10.0f,0.0f,0.0f),1.0,Node::TS_PARENT);
+	//TranslateToAction action(n,Vector3(10.0f,0.0f,0.0f),1.0,Node::TS_PARENT);
 	//guisys->load("media/gui/dx.xml");
 	//GUIButton* btn = (GUIButton*) guisys->getLayout(0)->getControlById(0);
 
@@ -94,27 +95,34 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	GUILabel* label = layout->createLabel(0,0,800,600,0,0);
 	label->setColor(0xffff0000);
 	guisys->changeCurrentLayout(0);
+	loggingInit(label);
 
 	DxParticleSystem ps;
-	ps.init(&df,6000,"");
-	DxEmitter em;
-	em.colorArray.push_back(DxColor(0xff00ff00));
-	em.colorFade = DxColor(0.0f,0.0f,0.0f,0.0f);
-	em.duration = 10.0f;
-	em.emitRate = -100.0f;
-	em.maxAcceleartion = Vector3(0.0f,-10.0f,-100.0f);
-	em.minAcceleartion = Vector3(0.0f,-1.0f,-10.0f);
-	em.maxPosition = Vector3(0.0f,0.0f,0.0f);
-	em.minPosition = Vector3(0.0f,0.0f,0.0f);
-	em.maxVelocity = Vector3(10.0f,10.0f,50.0f);
-	em.minVelocity = Vector3(-10.0f,1.0f,5.0f);
-	em.size = 0.1f;
+	ps.init(&df,5012,"media/tex/smoke000.tga");
+	DxParticleEmitter em;
+	DxColorValue t = {1.0f,0.2f,0.0f,1.0f};
+	em.colorBegine = t;
+	em.colorEnd = t;
+	em.direction = Vector3::UNIT_Z;
+	em.duration = 0.0f;
+	em.emitRate = 500.0f;
+	em.maxPosition = Vector3(10.0f,0.0f,2.0f);
+	em.minPosition = Vector3(-10.0f,0.0f,-1.0f);
+	em.minVelocity = 1.0f;
+	em.maxVelocity = 10.0f;
+	em.maxTimeLL = 3.0f;
+	em.minTimeLL = 1.0f;
+	em.size = 2.0f;
+	em.currentTime = 3.0f;
 	
-	ps.setEmitter(&em);
-
-	//SceneNode* nps = c.createNode("testps");
-	//nps->attach(&ps);
-	//nps->translate(0.0f,0.0f,0.0f);
+	ps.setEmitter(em);
+	//logToScreen("p","fuck");
+	/*
+	SceneNode* nps = c.createNode("testps");
+	nps->attach(&ps);
+	nps->yaw(PI);
+	nps->translate(0.0f,0.0f,-11.0f);
+	*/
 
 	while (true)
 	{
@@ -125,13 +133,13 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		camera.generateParentToLocalMatrix(&v);
 		renderer->setViewMatrix(v);
 
-		renderer->render(&c);
+		//renderer->render(&c);
 		
-		guisys->render();
+		renderer->beginScene();
+		renderer->render(&ps);
+		renderer->endScene();
 
-		ps.preRender(renderer);
-		ps.onRender(renderer);
-		ps.postRender(renderer);
+		guisys->render();
 
 		//n->yaw(getTimeSinceLastFrame() * 1.0f);
 		float timeDelta = getTimeSinceLastFrame();
@@ -164,16 +172,18 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		//r.calcPosition(timeDelta,&ani);
 		//n->translate(ani,Node::TS_PARENT);
 
-		if (action.act(timeDelta))
-		{
-			n->translate(walk,Node::TS_PARENT);
-		}
+		//if (action.act(timeDelta))
+		//{
+			
+		//}
+
+		n->translate(walk,Node::TS_PARENT);
 
 		isys->capture();
 		Point p = isys->getMouseClientPosition();
 		guisys->processGUI(p.x,p.y,isys->mouseButtonDown(0));
 		ps.update(timeDelta);
-		label->printf("%d",ps.size());
+		//logToScreen("particle num:","%d",ps.size());
 
 		renderer->present();
 
