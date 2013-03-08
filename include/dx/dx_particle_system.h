@@ -5,6 +5,7 @@
 #include "dx_renderer.h"
 #include "dx_vertex_structs.h"
 #include "dx_dxfw.h"
+#include "dx_particle_system_affector.h"
 
 #include <list>
 
@@ -21,9 +22,19 @@ class DxParticleEmitter
 {
 public:
 	bool			enable;
-	float			duration;
-	float			maxTimeLL;		//max time-to-live
-	float			minTimeLL;		//min time-to-live
+	bool			isRepeat;
+
+	// zero for forever
+	float			duration; 
+	// zero for no repeat
+	float			repeatDelay; 
+	float			currentTime;
+	float			repeatTimeRemain;
+
+	//max time-to-live
+	float			maxTimeLL;
+	//min time-to-live
+	float			minTimeLL;		
 
 	float			emitRate;
 	float			size;
@@ -32,7 +43,6 @@ public:
 
 	float			maxVelocity;
 	float			minVelocity;
-	float			currentTime;
 
 	DxColorValue	colorBegine;
 	DxColorValue	colorEnd;
@@ -41,7 +51,12 @@ public:
 	Vector3			maxPosition;
 
 	Vector3			direction;
-	Vector3			up; // Notional up vector, used to speed up generation of variant directions, and also to orient some emitters.
+	// Notional up vector, used to speed up 
+	// generation of variant directions, and also to orient some emitters.
+	Vector3			up; 
+
+	// a reasonable initialize
+	DxParticleEmitter();
 
 	virtual void initParticle(DxParticleAttribute* p);
 
@@ -51,36 +66,6 @@ public:
 	virtual void genVelocity(float* vel);
 	virtual void genTimeToLive(float* time);
 	virtual unsigned short  genEmissionCount(float time);
-};
-
-class DxParticleAffector
-{
-public:
-	virtual void init(DxParticleAttribute* particle) = 0;
-	virtual void affect(DxParticleAttribute* particle,float timeDelta) = 0;
-};
-
-class DxParticleAffectorFactory
-{
-public:
-	~DxParticleAffectorFactory();
-
-	DxParticleAffectorFactory* getSingletonPtr()
-	{
-		static DxParticleAffectorFactory* m = new DxParticleAffectorFactory;
-		return m;
-	}
-
-	DxParticleAffector* createAffector(const char* type);
-
-private:
-	typedef std::list<DxParticleAffector*> AffectorList;
-
-	AffectorList	mAffectors;
-
-	DxParticleAffectorFactory(){}
-	DxParticleAffectorFactory(const DxParticleAffectorFactory& v);
-	DxParticleAffectorFactory& operator=(const DxParticleAffectorFactory& v);
 };
 
 class DxParticleSystem : public IRenderable
@@ -94,8 +79,12 @@ public:
 	bool add(float delta);
 	bool isAlive() const;
 
-	void setEmitter(const DxParticleEmitter& em);
+	//note that emitter will be release by current
+	//particle system release() function
+	void setEmitter(DxParticleEmitter* em);
 
+	//note that affector will be released by current 
+	//particle system release() function
 	void addAffector(DxParticleAffector* affector);
 
 	void setVertexBufferAttribute(DWORD vbsize,DWORD batchSize);
@@ -130,7 +119,7 @@ private:
 	AffectorList			mAffectors;
 
 	AABB3					mBoundingBox;
-	DxParticleEmitter		mEmitter;
+	DxParticleEmitter*		mEmitter;
 
 private:
 	

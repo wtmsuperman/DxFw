@@ -6,6 +6,28 @@
 // Particle Emitter
 //
 
+DxParticleEmitter::DxParticleEmitter()
+{
+	DxColorValue t = {1.0f,1.0f,1.0f,1.0f};
+	colorBegine = t;
+	colorEnd = t;
+	angle = 0.0f;
+	up = Vector3::UNIT_Y;
+	direction = Vector3::UNIT_Z;
+	duration = 0.0f;
+	emitRate = 1000.0f;
+	maxPosition = Vector3(0.0f,0.0f,0.0f);
+	minPosition = Vector3(0.0f,0.0f,0.0f);
+	minVelocity = 1.0f;
+	maxVelocity = 10.0f;
+	maxTimeLL = 1.0f;
+	minTimeLL = 1.0f;
+	size = 1.0f;
+	repeatDelay = 0.0f;
+	currentTime = duration;
+	repeatTimeRemain = repeatDelay;
+}
+
 void DxParticleEmitter::initParticle(DxParticleAttribute* p)
 {
 	genColor(&p->color);
@@ -67,7 +89,7 @@ unsigned short DxParticleEmitter::genEmissionCount(float time)
         unsigned short intRequest = (unsigned short)remainder;
         remainder -= intRequest;
 
-		if (duration)
+		if (duration != 0.0f)
 		{
 			currentTime -= time;
 			if (currentTime <= 0.0f)
@@ -76,6 +98,19 @@ unsigned short DxParticleEmitter::genEmissionCount(float time)
 			}
 		}
 		return intRequest;
+	}
+	else
+	{
+		if (repeatDelay != 0.0f)
+		{
+			repeatTimeRemain -= time;
+			if (repeatTimeRemain <= 0.0f)
+			{
+				enable = true;
+				repeatTimeRemain = repeatDelay;
+				currentTime = duration;
+			}
+		}
 	}
 	return 0;
 }
@@ -161,7 +196,7 @@ bool DxParticleSystem::isAlive() const
 	return !mActiveParticles.empty();
 }
 
-void DxParticleSystem::setEmitter(const DxParticleEmitter& emitter)
+void DxParticleSystem::setEmitter(DxParticleEmitter* emitter)
 {
 	this->mEmitter = emitter;
 }
@@ -173,7 +208,7 @@ void DxParticleSystem::addAffector(DxParticleAffector* affector)
 
 bool DxParticleSystem::add(float timeDelta)
 {
-	unsigned short r =  mEmitter.genEmissionCount(timeDelta);
+	unsigned short r =  mEmitter->genEmissionCount(timeDelta);
 	//logToScreen("r","%d",r);
 	if (r == 0)
 		return false;
@@ -186,7 +221,7 @@ bool DxParticleSystem::add(float timeDelta)
 	{
 		DxParticleAttribute* p = mFreeParticles.front();
 		
-		mEmitter.initParticle(p);
+		mEmitter->initParticle(p);
 
 		//这里需要更改
 		//p->position;
@@ -210,6 +245,12 @@ bool DxParticleSystem::add(float timeDelta)
 void DxParticleSystem::release()
 {
 	safe_deleteArray(mParticlePool);
+	safe_delete(mEmitter);
+	AffectorListIter end = mAffectors.end();
+	for (AffectorListIter iter=mAffectors.begin(); iter!=end; ++iter)
+	{
+		safe_delete(*iter);
+	}
 }
 
 void DxParticleSystem::setBoundingBox(const AABB3& box)
@@ -230,7 +271,7 @@ void DxParticleSystem::preRender(DxRenderer* renderer)
 	renderer->setRenderState(D3DRS_ZWRITEENABLE,false);
 	renderer->setRenderState(D3DRS_POINTSPRITEENABLE,true);
 	renderer->setRenderState(D3DRS_POINTSCALEENABLE,true);
-	renderer->setRenderState(D3DRS_POINTSIZE,FtoDW(mEmitter.size));
+	renderer->setRenderState(D3DRS_POINTSIZE,FtoDW(mEmitter->size));
 	renderer->setRenderState(D3DRS_POINTSIZE_MIN,FtoDW(0.f));
 
 	renderer->setRenderState(D3DRS_POINTSCALE_A,FtoDW(0.0f));

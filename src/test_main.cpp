@@ -69,7 +69,7 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	df.getRenderer()->setLight(0,&light);
 
 	Node camera;
-	camera.setPosition(0.0f,60.0f,0.0f);
+	camera.setPosition(0.0f,100.0f,0.0f);
 	camera.lookAt(Vector3(0.0f,0.0f,0.0f));
 
 	n->yaw(PI);
@@ -101,25 +101,30 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 
 	DxParticleSystem ps;
 	ps.init(&df,5012,"media/tex/smoke000.tga");
-	DxParticleEmitter em;
-	DxColorValue t = {1.0f,0.2f,0.0f,1.0f};
-	em.colorBegine = t;
-	em.colorEnd = t;
-	em.angle = 180.0f;
-	em.up = Vector3::UNIT_Y;
-	em.direction = Vector3::UNIT_Z;
-	em.duration = 0.1f;
-	em.emitRate = 1000.0f;
-	em.maxPosition = Vector3(10.0f,10.0f,2.0f);
-	em.minPosition = Vector3(-10.0f,0.0f,-1.0f);
-	em.minVelocity = 50.0f;
-	em.maxVelocity = 80.0f;
-	em.maxTimeLL = 2.0f;
-	em.minTimeLL = 1.0f;
-	em.size = 3.0f;
-	em.currentTime = em.duration;
-	
+	DxParticleEmitter* em = new DxParticleEmitter;
+	DxColorValue e = {1.0f,1.0f,1.0f,1.0f};
+	DxColorValue b = {0.3f,0.5f,0.2f,1.0f};
+ 	em->colorBegine = b;
+	em->colorEnd = e;
+	em->angle = 180.0f;
+	em->up = Vector3::UNIT_Y;
+	em->direction = Vector3::UNIT_Z;
+	em->duration = 0.1f;
+	em->emitRate = 5000.0f;
+	em->maxPosition = Vector3(10.0f,10.0f,2.0f);
+	em->minPosition = Vector3(-10.0f,0.0f,-1.0f);
+	em->minVelocity = 50.0f;
+	em->maxVelocity = 80.0f;
+	em->maxTimeLL = 3.0f;
+	em->minTimeLL = 3.0f;
+	em->size = 1.1f;
+	em->repeatDelay = 2.5f;
+	em->currentTime = em->duration;
+	em->repeatTimeRemain = em->repeatDelay;
+
 	ps.setEmitter(em);
+	ps.addAffector(new LinearForceAffector(0.0f,0.0f,-100.0f,LinearForceAffector::FT_ADD));
+	ps.addAffector(new ColorFaderAffector(0.0f,0.2f,-0.2f,-0.1f));
 	//logToScreen("p","fuck");
 	/*
 	SceneNode* nps = c.createNode("testps");

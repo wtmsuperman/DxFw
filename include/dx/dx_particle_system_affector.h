@@ -1,0 +1,79 @@
+#ifndef __DX_PARTICLE_SYSTEM_AFFECTOR__
+#define __DX_PARTICLE_SYSTEM_AFFECTOR__
+
+#include <vector3.h>
+#include <dx/dx_defines.h>
+#include <dx/dx_particle_system_affector.h>
+
+class DxParticleAttribute;
+
+//Abstract class define a Particle Affector
+//Particle affector couble be the linear force such as gravity,or the color fader.
+//You can define your own Affector by extending this class
+class DxParticleAffector
+{
+public:
+	virtual void init(DxParticleAttribute* particle) = 0;
+	virtual void affect(DxParticleAttribute* particle,float timeDelta) = 0;
+};
+
+
+
+/** This class defines a ParticleAffector which applies a linear force to particles in a system.
+    @remarks
+        This affector (see ParticleAffector) applies a linear force, such as gravity, to a particle system.
+        This force can be applied in 2 ways: by taking the average of the particle's current momentum and the 
+        force vector, or by adding the force vector to the current particle's momentum. 
+    @par
+        The former approach is self-stabilising i.e. once a particle's momentum
+        is equal to the force vector, no further change is made to it's momentum. It also results in
+        a non-linear acceleration of particles.
+        The latter approach is simpler and applies a constant acceleration to particles. However,
+        it is not self-stabilising and can lead to perpetually increasing particle velocities. 
+*/
+class LinearForceAffector : public DxParticleAffector
+{
+public:
+
+	enum ForceType
+	{
+		FT_ADD,
+		FT_AVERAGE
+	};
+
+	LinearForceAffector(const Vector3& force,ForceType type=FT_ADD);
+	LinearForceAffector(float x,float y,float z,ForceType type=FT_ADD);
+
+	virtual void init(DxParticleAttribute* particle);
+	virtual void affect(DxParticleAttribute* particle,float timeDelta);
+
+	Vector3		force;
+	ForceType	type;
+};
+
+// change color per time delta
+
+class ColorFaderAffector : public DxParticleAffector
+{
+public:
+	ColorFaderAffector(float a,float r,float g,float b);
+
+	virtual void init(DxParticleAttribute* particle);
+	virtual void affect(DxParticleAttribute* particle,float timeDelta);
+
+	void setColor(float a,float r,float g,float b);
+	void setColor(const DxColorValue& colorFade);
+
+	void			getColor(float* a,float* r,float* g,float* b);
+	void			getColor(DxColorValue* colorFade);
+	DxColorValue	getColor();
+
+
+private:
+	float a;
+	float r;
+	float g;
+	float b;
+};
+
+#endif
