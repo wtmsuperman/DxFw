@@ -167,7 +167,7 @@ DxParticleSystem::~DxParticleSystem()
 bool DxParticleSystem::update(float delta)
 {
 	ActiveParticleListIter end = mActiveParticles.end();
-	AffectorListIter afend = mAffectors.end();
+	
 	for (ActiveParticleListIter iter=mActiveParticles.begin(); iter != end;)
 	{
 		DxParticleAttribute* p = *iter;
@@ -179,16 +179,22 @@ bool DxParticleSystem::update(float delta)
 		{
 			p->position += p->velocity * delta;
 			p->timeToLive -= delta;
-			for (AffectorListIter ai=mAffectors.begin(); ai != afend; ++ai){
-				(*ai)->affect(p,delta);
-			}
 			++iter;
 		}
 	}
 
 	add(delta);
+	affect(delta);
 	logToScreen("particle","%d",mActiveParticles.size());
 	return true;
+}
+
+void DxParticleSystem::affect(float delta)
+{
+	AffectorListIter afend = mAffectors.end();
+	for (AffectorListIter ai=mAffectors.begin(); ai != afend; ++ai){
+			(*ai)->affect(this,delta);
+	}
 }
 
 bool DxParticleSystem::isAlive() const
@@ -224,13 +230,19 @@ bool DxParticleSystem::add(float timeDelta)
 		mEmitter->initParticle(p);
 
 		//这里需要更改
-		//p->position;
+		// transform to world space
+		if (mParent)
+		{
+			p->position = mParent->getPosition() + p->position;
+			Matrix3x3 rotation(mParent->getOrientation());
+			p->velocity *= rotation;
+		}
 		//p->velocity = mEmitter.direction * randf(mEmitter.minVelocity,mEmitter.maxVelocity);
 
 		mFreeParticles.pop_front();
 		
 		for (AffectorListIter ai=mAffectors.begin(); ai != afend; ++ai){
-			(*ai)->init(p);
+			(*ai)->init(this);
 		}
 
 		p->position += p->velocity * timePoint;
@@ -298,6 +310,7 @@ void DxParticleSystem::onRender(DxRenderer* renderer)
 	if (!mActiveParticles.empty())
 	{
 		renderer->applyTexture(0,mTex);
+		renderer->setWorldTransform(Matrix4x4::IDENTITY);
 
 		IDirect3DDevice9* device = renderer->getDevice();
 

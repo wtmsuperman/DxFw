@@ -11,60 +11,76 @@ LinearForceAffector::LinearForceAffector(float x,float y,float z,ForceType Type)
 	:force(x,y,z),type(Type)
 {}
 
-void LinearForceAffector::init(DxParticleAttribute* particle)
+void LinearForceAffector::init(DxParticleSystem* ps)
 {
 	//do nothing;
 }
 
-void LinearForceAffector::affect(DxParticleAttribute* particle,float timeDelta)
+void LinearForceAffector::affect(DxParticleSystem* ps,float timeDelta)
 {
-	switch (type)
+	DxParticleSystem::ActiveParticleListIter end = ps->activeParticleEnd();
+
+	if (FT_ADD)
 	{
-	case FT_ADD:
-		particle->velocity += force * timeDelta;
-		break;
-	case FT_AVERAGE:
-		particle->velocity = (particle->velocity + force) * 0.5f;
-		break;
+		Vector3 r = force * timeDelta;
+	}
+
+	for (DxParticleSystem::ActiveParticleListIter iter = ps->activeParticleBegin(); iter != end; ++iter)
+	{
+		DxParticleAttribute* particle = *iter;
+		switch (type)
+		{
+		case FT_ADD:
+			particle->velocity += force * timeDelta;
+			break;
+		case FT_AVERAGE:
+			particle->velocity = (particle->velocity + force) * 0.5f;
+			break;
+		}
 	}
 }
 
 ColorFaderAffector::ColorFaderAffector(float a,float r,float g,float b)
 {
-	this->a = clamp(a,-1.0f,1.0f);
-	this->r = clamp(r,-1.0f,1.0f);
-	this->g = clamp(g,-1.0f,1.0f);
-	this->b = clamp(b,-1.0f,1.0f);
+	this->a = a;
+	this->b = b;
+	this->g = g;
+	this->r = r;
 }
 
-void ColorFaderAffector::init(DxParticleAttribute* p)
+void ColorFaderAffector::init(DxParticleSystem* ps)
 {
 	//do nothing
 }
 
-void ColorFaderAffector::affect(DxParticleAttribute* p,float timeDelta)
+void ColorFaderAffector::affect(DxParticleSystem* ps,float timeDelta)
 {
-	p->color.a = clamp(p->color.a + a*timeDelta,0.0f,1.0f);
-	p->color.r = clamp(p->color.r + r*timeDelta,0.0f,1.0f);
-	p->color.g = clamp(p->color.g + g*timeDelta,0.0f,1.0f);
-	p->color.b = clamp(p->color.b + b*timeDelta,0.0f,1.0f);
+	DxParticleSystem::ActiveParticleListIter end = ps->activeParticleEnd();
 
+	for (DxParticleSystem::ActiveParticleListIter iter = ps->activeParticleBegin(); iter != end; ++iter)
+	{
+		DxParticleAttribute* p = *iter;
+		p->color.a = clamp(p->color.a + a*timeDelta,0.0f,1.0f);
+		p->color.r = clamp(p->color.r + r*timeDelta,0.0f,1.0f);
+		p->color.g = clamp(p->color.g + g*timeDelta,0.0f,1.0f);
+		p->color.b = clamp(p->color.b + b*timeDelta,0.0f,1.0f);
+	}
 }
 
 void ColorFaderAffector::setColor(float a,float r,float g,float b)
 {
-	this->a = clamp(a,-1.0f,1.0f);
-	this->r = clamp(r,-1.0f,1.0f);
-	this->g = clamp(g,-1.0f,1.0f);
-	this->b = clamp(b,-1.0f,1.0f);
+	this->a = a;
+	this->b = b;
+	this->g = g;
+	this->r = r;
 }
 
 void ColorFaderAffector::setColor(const DxColorValue& colorFade)
 {
-	this->a = clamp(colorFade.a,-1.0f,1.0f);
-	this->r = clamp(colorFade.r,-1.0f,1.0f);
-	this->g = clamp(colorFade.g,-1.0f,1.0f);
-	this->b = clamp(colorFade.b,-1.0f,1.0f);
+	this->a = colorFade.a;
+	this->r = colorFade.r;
+	this->g = colorFade.g;
+	this->b = colorFade.b;
 }
 
 void ColorFaderAffector::getColor(float* a,float* r,float* g,float* b)

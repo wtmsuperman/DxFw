@@ -5,7 +5,7 @@
 #include <dx/dx_defines.h>
 #include <dx/dx_particle_system_affector.h>
 
-class DxParticleAttribute;
+class DxParticleSystem;
 
 //Abstract class define a Particle Affector
 //Particle affector couble be the linear force such as gravity,or the color fader.
@@ -13,8 +13,8 @@ class DxParticleAttribute;
 class DxParticleAffector
 {
 public:
-	virtual void init(DxParticleAttribute* particle) = 0;
-	virtual void affect(DxParticleAttribute* particle,float timeDelta) = 0;
+	virtual void init(DxParticleSystem* ps) = 0;
+	virtual void affect(DxParticleSystem* ps,float timeDelta) = 0;
 };
 
 
@@ -44,8 +44,8 @@ public:
 	LinearForceAffector(const Vector3& force,ForceType type=FT_ADD);
 	LinearForceAffector(float x,float y,float z,ForceType type=FT_ADD);
 
-	virtual void init(DxParticleAttribute* particle);
-	virtual void affect(DxParticleAttribute* particle,float timeDelta);
+	virtual void init(DxParticleSystem* ps);
+	virtual void affect(DxParticleSystem* ps,float timeDelta);
 
 	Vector3		force;
 	ForceType	type;
@@ -58,8 +58,8 @@ class ColorFaderAffector : public DxParticleAffector
 public:
 	ColorFaderAffector(float a,float r,float g,float b);
 
-	virtual void init(DxParticleAttribute* particle);
-	virtual void affect(DxParticleAttribute* particle,float timeDelta);
+	virtual void init(DxParticleSystem* ps);
+	virtual void affect(DxParticleSystem* ps,float timeDelta);
 
 	void setColor(float a,float r,float g,float b);
 	void setColor(const DxColorValue& colorFade);

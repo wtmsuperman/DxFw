@@ -6,6 +6,7 @@
 #include "dx_vertex_structs.h"
 #include "dx_dxfw.h"
 #include "dx_particle_system_affector.h"
+#include <node/attachable.h>
 
 #include <list>
 
@@ -68,7 +69,7 @@ public:
 	virtual unsigned short  genEmissionCount(float time);
 };
 
-class DxParticleSystem : public IRenderable
+class DxParticleSystem : public AttachableObject
 {
 public:
 	DxParticleSystem();
@@ -77,6 +78,7 @@ public:
 	bool init(DxFw* fw,size_t maxSize,const char* tex);
 	void release();
 	bool add(float delta);
+	void affect(float delta);
 	bool isAlive() const;
 
 	//note that emitter will be release by current
@@ -91,7 +93,6 @@ public:
 
 	void setBoundingBox(const AABB3& boundingbox);
 
-
 	const AABB3&		getBoundingBox() const {return mBoundingBox;}
 
 	virtual void preRender(DxRenderer* renderer);
@@ -105,10 +106,12 @@ private:
 	typedef std::list<DxParticleAttribute*> ActiveParticleList;
 	typedef std::list<DxParticleAffector*>	AffectorList;
 
+public:
 	typedef FreeParticleQueue::iterator		FreeParticleQueueIter;
 	typedef ActiveParticleList::iterator	ActiveParticleListIter;
 	typedef AffectorList::iterator			AffectorListIter;
 
+private:
 	DxFw*					mDxFw;
 
 	size_t					mMaxSize;
@@ -121,6 +124,16 @@ private:
 	AABB3					mBoundingBox;
 	DxParticleEmitter*		mEmitter;
 
+public:
+	ActiveParticleListIter	activeParticleBegin()
+	{
+		return mActiveParticles.begin();
+	}
+	ActiveParticleListIter	activeParticleEnd()
+	{
+		return mActiveParticles.end();
+	}
+
 private:
 	
 	DxTexture*					mTex;
@@ -128,10 +141,10 @@ private:
 	DWORD						mVbSize;
 	DWORD						mVbOffset;
 	DWORD						mVbBatchSize;
-
 private:
 	DWORD	tLight; // temporary saving lighting value
-
 };
+
+void loadParticleSystem(DxParticleSystem* o,const char* fileName);
 
 #endif

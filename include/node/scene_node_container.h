@@ -24,9 +24,7 @@ public:
 	void		onRender(DxRenderer* render);
 
 	void		postRender(DxRenderer* render)
-	{
-		render->setWorldTransform(Matrix4x4::IDENTITY);
-	}
+	{}
 
 protected:
 	typedef std::map<const char*,SceneNode*,ltstr>	NodeType;

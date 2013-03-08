@@ -102,29 +102,32 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	DxParticleSystem ps;
 	ps.init(&df,5012,"media/tex/smoke000.tga");
 	DxParticleEmitter* em = new DxParticleEmitter;
-	DxColorValue e = {1.0f,1.0f,1.0f,1.0f};
-	DxColorValue b = {0.3f,0.5f,0.2f,1.0f};
+	
+	DxColorValue e = {0.7f,0.7f,0.8f,0.7f};
+	DxColorValue b = {0.7f,0.7f,0.8f,0.7f};
  	em->colorBegine = b;
 	em->colorEnd = e;
-	em->angle = 180.0f;
+	
+	em->angle = 0.0f;
 	em->up = Vector3::UNIT_Y;
 	em->direction = Vector3::UNIT_Z;
-	em->duration = 0.1f;
-	em->emitRate = 5000.0f;
-	em->maxPosition = Vector3(10.0f,10.0f,2.0f);
-	em->minPosition = Vector3(-10.0f,0.0f,-1.0f);
+	em->duration = 0.0f;
+	em->emitRate = 1000.0f;
+	em->maxPosition = Vector3(1.0f,10.0f,2.0f);
+	em->minPosition = Vector3(-1.0f,0.0f,-1.0f);
 	em->minVelocity = 50.0f;
 	em->maxVelocity = 80.0f;
-	em->maxTimeLL = 3.0f;
-	em->minTimeLL = 3.0f;
-	em->size = 1.1f;
+	em->maxTimeLL = 0.5f;
+	em->minTimeLL = 0.1f;
+	em->size = 1.5f;
 	em->repeatDelay = 2.5f;
 	em->currentTime = em->duration;
 	em->repeatTimeRemain = em->repeatDelay;
 
 	ps.setEmitter(em);
 	ps.addAffector(new LinearForceAffector(0.0f,0.0f,-100.0f,LinearForceAffector::FT_ADD));
-	ps.addAffector(new ColorFaderAffector(0.0f,0.2f,-0.2f,-0.1f));
+	ps.addAffector(new ColorFaderAffector(0.0f,2.0f,-2.0f,-3.0f));
+	n->attach(&ps);
 	//logToScreen("p","fuck");
 	/*
 	SceneNode* nps = c.createNode("testps");
@@ -142,11 +145,7 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		camera.generateParentToLocalMatrix(&v);
 		renderer->setViewMatrix(v);
 
-		//renderer->render(&c);
-		
-		renderer->beginScene();
-		renderer->render(&ps);
-		renderer->endScene();
+		renderer->render(&c);
 
 		guisys->render();
 

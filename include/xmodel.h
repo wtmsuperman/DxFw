@@ -2,13 +2,11 @@
 #define __XModel__
 
 #include "dx/dx_resource.h"
-#include "dx/dx_renderer.h"
+#include "node/attachable.h"
 
-class XModel : public IRenderable
+class XModel : public AttachableObject
 {
 public:
-	
-
 
 	virtual void preRender(DxRenderer* renderer)
 	{}
