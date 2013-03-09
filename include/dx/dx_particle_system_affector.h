@@ -41,6 +41,11 @@ typedef DxParticleAffector* (*AffecotrCreator)(const char* file);
 
 void registAffectorCreator(const char* name,AffecotrCreator creator);
 
+
+// Get a affector creator
+
+AffecotrCreator getAffectorCreator(const char* name);
+
 /** This class defines a ParticleAffector which applies a linear force to particles in a system.
     @remarks
         This affector (see ParticleAffector) applies a linear force, such as gravity, to a particle system.
@@ -63,6 +68,7 @@ public:
 		FT_AVERAGE
 	};
 
+	LinearForceAffector();
 	LinearForceAffector(const Vector3& force,ForceType type=FT_ADD);
 	LinearForceAffector(float x,float y,float z,ForceType type=FT_ADD);
 
@@ -78,6 +84,9 @@ public:
 class ColorFaderAffector : public DxParticleAffector
 {
 public:
+
+	ColorFaderAffector();
+
 	ColorFaderAffector(float a,float r,float g,float b);
 
 	virtual void init(DxParticleSystem* ps);

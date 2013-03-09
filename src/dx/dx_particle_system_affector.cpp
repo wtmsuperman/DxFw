@@ -44,7 +44,49 @@ void LinearForceAffector::affect(DxParticleSystem* ps,float timeDelta)
 
 DxParticleAffector* createLinearForceAffector(const char* file)
 {
+	lua_State* L = lua_open();
+	luaL_loadfile(L,file);
+	lua_pcall(L,0,0,0);
+	lua_getglobal(L,"affector");
+	if (!lua_istable(L,-1))
+	{
+		lua_close(L);
+		return 0;
+	}
 
+	lua_getfield(L,-1,"force");
+	if (!lua_istable(L,-1))
+	{
+		lua_close(L);
+		return 0;
+	}
+	lua_rawgeti(L,-1,1);
+	lua_rawgeti(L,-2,2);
+	lua_rawgeti(L,-3,3);
+	Vector3 force((float)lua_tonumber(L,-3),(float)lua_tonumber(L,-2),(float)lua_tonumber(L,-1));
+	lua_pop(L,1);
+	lua_pop(L,1);
+	lua_pop(L,1);
+	lua_pop(L,1);
+
+	lua_getfield(L,-1,"type");
+	const char* typeStr = lua_tostring(L,-1);
+	lua_pop(L,1);
+
+	LinearForceAffector::ForceType type;
+
+	if (strcmp("add",typeStr)==0)
+	{
+		type = LinearForceAffector::FT_ADD;
+	}
+	else if (strcmp("average",typeStr) == 0)
+	{
+		type = LinearForceAffector::FT_AVERAGE;
+	}
+
+	LinearForceAffector* affector = new LinearForceAffector(force,type);
+	lua_close(L);
+	return affector;
 }
 
 ColorFaderAffector::ColorFaderAffector(float a,float r,float g,float b)
@@ -116,8 +158,43 @@ DxColorValue ColorFaderAffector::getColor()
 	return v;
 }
 
+static std::map<std::string,AffecotrCreator> creators;
+
 void registAffectorCreator(const char* name,AffecotrCreator creator)
 {
-	static std::map<std::string,AffecotrCreator> creators;
 	creators[name] = creator;
+}
+
+AffecotrCreator getAffectorCreator(const char* name)
+{
+	return creators[name];
+}
+
+DxParticleAffector* creatColorFaderAffector(const char* file)
+{
+	lua_State* L = lua_open();
+	luaL_loadfile(L,file);
+	
+	lua_getglobal(L,"affector");
+	if (lua_isnil(L,-1))
+	{
+		lua_close(L);
+		return 0;
+	}
+
+	ColorFaderAffector* colorFader = new ColorFaderAffector();
+	lua_getfield(L,-1,"a");
+	lua_getfield(L,-2,"r");
+	lua_getfield(L,-3,"g");
+	lua_getfield(L,-4,"b");
+	if (lua_isnumber(L,-1) && lua_isnumber(L,-2) && lua_isnumber(L,-3) && lua_isnumber(L,-4))
+	{
+		colorFader->setColor((float)lua_tonumber(L,-4),(float)lua_tonumber(L,-3),(float)lua_tonumber(L,-2),(float)lua_tonumber(L,-1));
+	}
+	else
+	{
+		lua_close(L);
+		return 0;
+	}
+	return colorFader;
 }

@@ -387,6 +387,7 @@ bool loadParticleSystem(DxParticleSystem* o,DxFw* fw,const char* fileName)
 	}
 	else
 	{
+		lua_close(L);
 		return false;
 	}
 
@@ -569,7 +570,16 @@ bool loadParticleSystem(DxParticleSystem* o,DxFw* fw,const char* fileName)
 
 	lua_pop(L,1); // pop emitter
 
+	lua_getglobal(L,"affectors");
 
+	lua_pushnil(L);
+	while (lua_next(L,1) != 0)
+	{
+		// key at -2,value at -1
+		DxParticleAffector* affector = getAffectorCreator(lua_tostring(L,-2))(lua_tostring(L,-1));
+		o->addAffector(affector);
+		lua_pop(L,1);
+	}
 
 	lua_close(L);
 }
