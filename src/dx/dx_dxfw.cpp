@@ -4,6 +4,8 @@
 #include "dx/dx_d3d_input.h"
 #include "dx/dx_input_interface.h"
 
+#include <time.h>
+
 #pragma comment(lib,"d3d9.lib")
 #pragma comment(lib,"d3dx9.lib")
 #pragma comment(lib,"winmm.lib")
@@ -114,6 +116,43 @@ bool DxFw::initDx(const DxParam& param)
 
 	return true;
 }
+
+void DxFw::saveScreenshot(const char* fileName)
+{
+	if (fileName == 0)
+		return;
+	//log("start save shot");
+	LPDIRECT3DSURFACE9 surface = 0;
+	D3DDISPLAYMODE mode;
+
+	mDevice->GetDisplayMode(0,&mode);
+	if (FAILED( mDevice->CreateOffscreenPlainSurface(mode.Width,mode.Height,D3DFMT_A8R8G8B8,D3DPOOL_DEFAULT,&surface,0)))
+	{
+		MessageBox(0,"save screenshot failed","error",MB_OK);
+		return;
+	}
+	if (FAILED(mDevice->GetBackBuffer(0,0,D3DBACKBUFFER_TYPE_MONO,&surface)))
+	{
+		MessageBox(0,"save screenshot failed","error",MB_OK);
+		return;
+	}
+
+	D3DXSaveSurfaceToFile(fileName,D3DXIFF_PNG,surface,0,0);
+	surface->Release();
+}
+
+void DxFw::saveScreenshot()
+{
+	time_t t;
+	tm p;
+	time(&t);
+	localtime_s(&p,&t);
+	char buffer[64];
+
+	sprintf(buffer,"%04d%02d%02d_%02d%02d%02d.png",p.tm_year+1900,p.tm_mon+1,p.tm_mday,p.tm_hour,p.tm_min,p.tm_sec);
+	saveScreenshot(buffer);
+}
+
 
 void DxFw::release()
 {

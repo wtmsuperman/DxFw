@@ -1,6 +1,7 @@
 #include "dx/dx_particle_system.h"
 #include "dx/dx_resource_manager.h"
 #include "dx/dx_logging.h"
+#include <script/scriptlib.h>
 
 //
 // Particle Emitter
@@ -358,4 +359,217 @@ void DxParticleSystem::onRender(DxRenderer* renderer)
 		}
 		mVbOffset += mVbBatchSize;
 	}
+}
+
+bool loadParticleSystem(DxParticleSystem* o,DxFw* fw,const char* fileName)
+{
+	lua_State* L = lua_open();
+	luaL_loadfile(L,fileName);
+	lua_pcall(L,0,0,0);
+
+	lua_getglobal(L,"particle_system");
+	
+	lua_getfield(L,1,"max_size");
+	lua_getfield(L,1,"texture");
+	lua_getfield(L,1,"vertex_buffer_size");
+	lua_getfield(L,1,"batch_size");
+
+	if (lua_isnumber(L,2))
+	{
+		if (lua_isstring(L,3))
+		{
+			o->init(fw,(size_t)lua_tonumber(L,-1),lua_tostring(L,-2));
+		}
+		else
+		{
+			o->init(fw,(size_t)lua_tonumber(L,-1),"");
+		}
+	}
+	else
+	{
+		return false;
+	}
+
+	if (lua_isnumber(L,4) && lua_isnumber(L,5))
+	{
+		o->setVertexBufferAttribute((DWORD)lua_tonumber(L,2),(DWORD)lua_tonumber(L,3));
+	}
+
+	lua_pop(L,1); // pop batch_size
+	lua_pop(L,1); // pop vertex_buffer_size
+	lua_pop(L,1); // pop texture;
+	lua_pop(L,1); // pop max_size;
+	lua_pop(L,1); // pop particle_system
+
+	////////////////////////////////////////////////////////////////////
+	
+	//emitter
+	lua_getglobal(L,"emitter");
+	static char items[][32] = { 
+		"position_max"
+		,"position_min"
+		,"velocity_max"
+		,"velocity_min"
+		,"color_begine"
+		,"color_end"
+		,"time_to_live_max"
+		,"time_to_live_min"
+		,"duration"
+		,"repeat_delay"
+		,"angle"
+		,"size"
+		,"emit_rate"
+		,"direction"
+	};
+
+	for (int i=0; i<14; ++i)
+	{
+		lua_getfield(L,1,items[i]);
+	}
+
+	DxParticleEmitter* emitter = new DxParticleEmitter;
+
+	//direction
+	if (lua_istable(L,-1))
+	{
+		lua_rawgeti(L,-1,1); //x
+		lua_rawgeti(L,-2,2); //y
+		lua_rawgeti(L,-3,3); //z
+		emitter->direction = Vector3((float)lua_tonumber(L,-3),(float)lua_tonumber(L,-2),(float)lua_tonumber(L,-1));
+		lua_pop(L,1); // pop z
+		lua_pop(L,1); // pop y
+		lua_pop(L,1); // pop x
+	}
+	lua_pop(L,1); // pop direction
+
+	//emit_rate
+	if (lua_isnumber(L,-1))
+	{
+		emitter->emitRate = (float)lua_tonumber(L,-1);
+	}
+	lua_pop(L,1); // pop emit_rate
+
+	//emit_size
+	if (lua_isnumber(L,-1))
+	{
+		emitter->size = (float)lua_tonumber(L,-1);
+	}
+	lua_pop(L,1); // pop size
+
+	//angle
+	if (lua_isnumber(L,-1))
+	{
+		emitter->angle = (float)lua_tonumber(L,-1);
+	}
+	lua_pop(L,1); // pop angle
+
+	//repeat_delay
+	if (lua_isnumber(L,-1))
+	{
+		emitter->repeatDelay = (float)lua_tonumber(L,-1);
+	}
+	lua_pop(L,1); // pop repeat_delay
+
+	//duration
+	if (lua_isnumber(L,-1))
+	{
+		emitter->duration = (float)lua_tonumber(L,-1);
+	}
+	lua_pop(L,1); // pop duration
+
+	//time_to_live_min
+	if (lua_isnumber(L,-1))
+	{
+		emitter->minTimeLL = (float)lua_tonumber(L,-1);
+	}
+	lua_pop(L,1); // pop time_to_live_min
+
+	//time_to_live_max
+	if (lua_isnumber(L,-1))
+	{
+		emitter->maxTimeLL = (float)lua_tonumber(L,-1);
+	}
+	lua_pop(L,1); // pop time_to_live_max
+
+	//color_end
+	if (lua_istable(L,-1))
+	{
+		lua_rawgeti(L,-1,1); //a
+		lua_rawgeti(L,-2,2); //r
+		lua_rawgeti(L,-3,3); //g
+		lua_rawgeti(L,-4,4); //b
+		emitter->colorEnd.a = (float)lua_tonumber(L,-4);
+		emitter->colorEnd.r = (float)lua_tonumber(L,-3);
+		emitter->colorEnd.g = (float)lua_tonumber(L,-2);
+		emitter->colorEnd.b = (float)lua_tonumber(L,-1);
+		lua_pop(L,1); // pop b
+		lua_pop(L,1); // pop g
+		lua_pop(L,1); // pop r
+		lua_pop(L,1); // pop a
+	}
+	lua_pop(L,1); // pop color_end
+
+	//color_begine
+	if (lua_istable(L,-1))
+	{
+		lua_rawgeti(L,-1,1); //a
+		lua_rawgeti(L,-2,2); //r
+		lua_rawgeti(L,-3,3); //g
+		lua_rawgeti(L,-4,4); //b
+		emitter->colorBegine.a = (float)lua_tonumber(L,-4);
+		emitter->colorBegine.r = (float)lua_tonumber(L,-3);
+		emitter->colorBegine.g = (float)lua_tonumber(L,-2);
+		emitter->colorBegine.b = (float)lua_tonumber(L,-1);
+		lua_pop(L,1); // pop b
+		lua_pop(L,1); // pop g
+		lua_pop(L,1); // pop r
+		lua_pop(L,1); // pop a
+	}
+	lua_pop(L,1); // pop color_begine
+
+	//velocity_min
+	if (lua_isnumber(L,-1))
+	{
+		emitter->minVelocity = (float)lua_tonumber(L,-1);
+	}
+	lua_pop(L,1); // pop velocity_min
+
+	//velocity_max
+	if (lua_isnumber(L,-1))
+	{
+		emitter->maxVelocity = (float)lua_tonumber(L,-1);
+	}
+	lua_pop(L,1); // pop velocity_max
+
+	//position_min
+	if (lua_istable(L,-1))
+	{
+		lua_rawgeti(L,-1,1); //x
+		lua_rawgeti(L,-2,2); //y
+		lua_rawgeti(L,-3,3); //z
+		emitter->minPosition = Vector3((float)lua_tonumber(L,-3),(float)lua_tonumber(L,-2),(float)lua_tonumber(L,-1));
+		lua_pop(L,1); // pop z
+		lua_pop(L,1); // pop y
+		lua_pop(L,1); // pop x
+	}
+	lua_pop(L,1); // pop position_min
+
+	//position_max
+	if (lua_istable(L,-1))
+	{
+		lua_rawgeti(L,-1,1); //x
+		lua_rawgeti(L,-2,2); //y
+		lua_rawgeti(L,-3,3); //z
+		emitter->maxPosition = Vector3((float)lua_tonumber(L,-3),(float)lua_tonumber(L,-2),(float)lua_tonumber(L,-1));
+		lua_pop(L,1); // pop z
+		lua_pop(L,1); // pop y
+		lua_pop(L,1); // pop x
+	}
+	lua_pop(L,1); // pop position_max
+
+	lua_pop(L,1); // pop emitter
+
+
+
+	lua_close(L);
 }

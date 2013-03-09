@@ -175,6 +175,10 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		{
 			walk.z -= vspeed * timeDelta;
 		}
+		if (isys->keyDown(DIK_F5))
+		{
+			df.saveScreenshot();
+		}
 		
 		//Vector3 ani;
 		//r.calcPosition(timeDelta,&ani);

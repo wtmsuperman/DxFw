@@ -1,5 +1,7 @@
 #include <dx/dx_particle_system_affector.h>
 #include <dx/dx_particle_system.h>
+#include <script/scriptlib.h>
+#include <map>
 
 LinearForceAffector::LinearForceAffector(const Vector3& Force,ForceType Type)
 	:force(Force),type(Type)
@@ -38,6 +40,11 @@ void LinearForceAffector::affect(DxParticleSystem* ps,float timeDelta)
 			break;
 		}
 	}
+}
+
+DxParticleAffector* createLinearForceAffector(const char* file)
+{
+
 }
 
 ColorFaderAffector::ColorFaderAffector(float a,float r,float g,float b)
@@ -107,4 +114,10 @@ DxColorValue ColorFaderAffector::getColor()
 	v.g = g;
 	v.b = b;
 	return v;
+}
+
+void registAffectorCreator(const char* name,AffecotrCreator creator)
+{
+	static std::map<std::string,AffecotrCreator> creators;
+	creators[name] = creator;
 }

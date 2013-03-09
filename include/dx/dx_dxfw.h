@@ -47,6 +47,10 @@ public:
 	IDirect3DDevice9*	getDevice() const {return mDevice;}
 	IInputSystem*		getInputSystem() const {return mInputSys;}
 
+	void				saveScreenshot(const char* fileName);
+	//save screenshot named by date
+	void				saveScreenshot();
+
 private:
 	DxRenderer*			mRenderer;
 	DxResourceManager*	mResourceMgr;

@@ -23,7 +23,6 @@ class DxParticleEmitter
 {
 public:
 	bool			enable;
-	bool			isRepeat;
 
 	// zero for forever
 	float			duration; 
@@ -145,6 +144,6 @@ private:
 	DWORD	tLight; // temporary saving lighting value
 };
 
-void loadParticleSystem(DxParticleSystem* o,const char* fileName);
+bool loadParticleSystem(DxParticleSystem* o,DxFw* fw,const char* fileName);
 
 #endif

@@ -7,6 +7,8 @@
 
 class DxParticleSystem;
 
+
+
 //Abstract class define a Particle Affector
 //Particle affector couble be the linear force such as gravity,or the color fader.
 //You can define your own Affector by extending this class
@@ -17,7 +19,27 @@ public:
 	virtual void affect(DxParticleSystem* ps,float timeDelta) = 0;
 };
 
+// Affector creator
 
+typedef DxParticleAffector* (*AffecotrCreator)(const char* file);
+
+// Regist an affector creator by given name
+// You should regist a manual affector,then you can use it in your particle system script file.
+// Like:
+//
+// In the affector.lua
+// affecotr={
+//	 name="myaffector",
+//   ...
+//   ...
+//   ...
+// }
+//
+// In your .cpp
+// you should call registAffectorCreator("myaffector",func) befor you load the scrpit
+// func is your affecotr creator,take the lua script path
+
+void registAffectorCreator(const char* name,AffecotrCreator creator);
 
 /** This class defines a ParticleAffector which applies a linear force to particles in a system.
     @remarks
