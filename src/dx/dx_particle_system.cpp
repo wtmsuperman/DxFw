@@ -172,7 +172,7 @@ bool DxParticleSystem::update(float delta)
 	for (ActiveParticleListIter iter=mActiveParticles.begin(); iter != end;)
 	{
 		DxParticleAttribute* p = *iter;
-		if (p->timeToLive < delta || !mBoundingBox.cantains(p->position))
+		if (p->timeToLive < delta || !mBoundingBox.contains(p->position))
 		{
 			mFreeParticles.splice(mFreeParticles.end(),mActiveParticles,iter++);
 		}
@@ -364,7 +364,12 @@ void DxParticleSystem::onRender(DxRenderer* renderer)
 bool loadParticleSystem(DxParticleSystem* o,DxFw* fw,const char* fileName)
 {
 	lua_State* L = lua_open();
-	luaL_loadfile(L,fileName);
+	if (luaL_loadfile(L,fileName))
+	{
+		assert(true && "particle system script path error");
+		lua_close(L);
+		return false;
+	}
 	lua_pcall(L,0,0,0);
 
 	lua_getglobal(L,"particle_system");
@@ -378,11 +383,11 @@ bool loadParticleSystem(DxParticleSystem* o,DxFw* fw,const char* fileName)
 	{
 		if (lua_isstring(L,3))
 		{
-			o->init(fw,(size_t)lua_tonumber(L,-1),lua_tostring(L,-2));
+			o->init(fw,(size_t)lua_tonumber(L,2),lua_tostring(L,3));
 		}
 		else
 		{
-			o->init(fw,(size_t)lua_tonumber(L,-1),"");
+			o->init(fw,(size_t)lua_tonumber(L,2),"");
 		}
 	}
 	else
@@ -570,6 +575,8 @@ bool loadParticleSystem(DxParticleSystem* o,DxFw* fw,const char* fileName)
 
 	lua_pop(L,1); // pop emitter
 
+	o->setEmitter(emitter);
+
 	lua_getglobal(L,"affectors");
 
 	lua_pushnil(L);
@@ -577,9 +584,11 @@ bool loadParticleSystem(DxParticleSystem* o,DxFw* fw,const char* fileName)
 	{
 		// key at -2,value at -1
 		DxParticleAffector* affector = getAffectorCreator(lua_tostring(L,-2))(lua_tostring(L,-1));
+		assert(affector != 0 && "create affector error");
 		o->addAffector(affector);
 		lua_pop(L,1);
 	}
 
 	lua_close(L);
+	return true;
 }

@@ -43,6 +43,8 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		MessageBox(0,"input failed","",MB_OK);
 	}
 
+	registAllDefaultAffectos();
+
 	df.getRenderer()->setAsPerspectiveProjection(PI_OVER_2,800.0f / 600.0f,1.0f,1000.0f);
 
 	SceneNodeContainer c;
@@ -100,7 +102,10 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	loggingInit(label);
 
 	DxParticleSystem ps;
-	ps.init(&df,5012,"media/tex/smoke000.tga");
+	loadParticleSystem(&ps,&df,"media/particle/particl_1.lua");
+	//ps.init(&df,5012,"media/tex/smoke000.tga");
+
+	/*
 	DxParticleEmitter* em = new DxParticleEmitter;
 	
 	DxColorValue e = {0.7f,0.7f,0.8f,0.7f};
@@ -127,6 +132,7 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	ps.setEmitter(em);
 	ps.addAffector(new LinearForceAffector(0.0f,0.0f,-100.0f,LinearForceAffector::FT_ADD));
 	ps.addAffector(new ColorFaderAffector(0.0f,2.0f,-2.0f,-3.0f));
+	*/
 	n->attach(&ps);
 	//logToScreen("p","fuck");
 	/*

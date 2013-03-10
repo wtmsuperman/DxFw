@@ -3,6 +3,12 @@
 #include <script/scriptlib.h>
 #include <map>
 
+LinearForceAffector::LinearForceAffector()
+{
+	force = Vector3::ZERO;
+	type = FT_ADD;
+}
+
 LinearForceAffector::LinearForceAffector(const Vector3& Force,ForceType Type)
 	:force(Force),type(Type)
 {
@@ -45,7 +51,12 @@ void LinearForceAffector::affect(DxParticleSystem* ps,float timeDelta)
 DxParticleAffector* createLinearForceAffector(const char* file)
 {
 	lua_State* L = lua_open();
-	luaL_loadfile(L,file);
+	if (luaL_loadfile(L,file))
+	{
+		assert(true && "affector script path error");
+		lua_close(L);
+		return 0;
+	}
 	lua_pcall(L,0,0,0);
 	lua_getglobal(L,"affector");
 	if (!lua_istable(L,-1))
@@ -87,6 +98,14 @@ DxParticleAffector* createLinearForceAffector(const char* file)
 	LinearForceAffector* affector = new LinearForceAffector(force,type);
 	lua_close(L);
 	return affector;
+}
+
+ColorFaderAffector::ColorFaderAffector()
+{
+	a = 0.0f;
+	r = 0.0f;
+	g = 0.0f;
+	b = 0.0f;
 }
 
 ColorFaderAffector::ColorFaderAffector(float a,float r,float g,float b)
@@ -167,13 +186,27 @@ void registAffectorCreator(const char* name,AffecotrCreator creator)
 
 AffecotrCreator getAffectorCreator(const char* name)
 {
-	return creators[name];
+	std::map<std::string,AffecotrCreator>::iterator iter;
+	iter = creators.find(name);
+	return iter != creators.end() ? iter->second : 0;
 }
 
-DxParticleAffector* creatColorFaderAffector(const char* file)
+void registAllDefaultAffectos()
+{
+	registAffectorCreator("LinearForce",createLinearForceAffector);
+	registAffectorCreator("ColorFader",createColorFaderAffector);
+}
+
+DxParticleAffector* createColorFaderAffector(const char* file)
 {
 	lua_State* L = lua_open();
-	luaL_loadfile(L,file);
+	if (luaL_loadfile(L,file))
+	{
+		assert(true && "affector script path error");
+		lua_close(L);
+		return 0;
+	}
+	lua_pcall(L,0,0,0);
 	
 	lua_getglobal(L,"affector");
 	if (lua_isnil(L,-1))
@@ -196,5 +229,6 @@ DxParticleAffector* creatColorFaderAffector(const char* file)
 		lua_close(L);
 		return 0;
 	}
+	lua_close(L);
 	return colorFader;
 }

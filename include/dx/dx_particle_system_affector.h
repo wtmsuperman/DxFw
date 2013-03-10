@@ -7,6 +7,9 @@
 
 class DxParticleSystem;
 
+// Regist all the provided affectors
+// Call this function befor load particle system
+void registAllDefaultAffectos();
 
 
 //Abstract class define a Particle Affector
@@ -106,5 +109,13 @@ private:
 	float g;
 	float b;
 };
+
+
+//* Affector creator
+
+extern DxParticleAffector* createColorFaderAffector(const char* file);
+extern DxParticleAffector* createLinearForceAffector(const char* file);
+
+///////////////////////////////////////////////////////////////////////////
 
 #endif
