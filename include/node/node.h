@@ -1,7 +1,8 @@
 #ifndef __NODE__
 #define __NODE__
 #include "mathlib.h"
-
+#include <map>
+#include <dx/dx_defines.h>
 
 class Node
 {
@@ -14,12 +15,36 @@ public:
 protected:
 	Vector3 pos;
 	Quaternion orientation;
+	Node*	parent;
+	
+	typedef std::map<std::string,Node*>		NodeMap;
+	typedef NodeMap::iterator						NodeIter;
+	typedef NodeMap::const_iterator					ConstNodeIter;
+
+	NodeMap											mNodes;
+	char*											name;
 public:
 
 	Node()
-		:pos(0.0f,0.0f,0.0f),orientation(1.0f,0.0f,0.0f,0.0f)
+		:pos(0.0f,0.0f,0.0f),orientation(1.0f,0.0f,0.0f,0.0f),name(0),parent(0)
 	{
 
+	}
+
+	Node(const char* name)
+		:pos(0.0f,0.0f,0.0f),orientation(1.0f,0.0f,0.0f,0.0f),parent(0)
+	{
+		this->name = new char[strlen(name)+1];
+		strcpy(this->name,name);
+	}
+
+	~Node()
+	{
+		if (parent)
+		{
+			parent->removeChild(name);
+		}
+		safe_deleteArray(name);
 	}
 
 	void setPosition(const Vector3& pos)
@@ -44,9 +69,14 @@ public:
 		orientation.setToRotateInertialToObject(e);
 	}
 
-	void lookAt(const Vector3& pos)
+	void lookAt(const Vector3& position)
 	{
-		orientation.setToRatationTo(Vector3::UNIT_Z,pos-this->pos);
+		orientation.setToRatationTo(Vector3::UNIT_Z,position - this->pos);
+	}
+
+	void lookAt(float x,float y,float z)
+	{
+		orientation.setToRatationTo(Vector3::UNIT_Z,Vector3(x,y,z) - this->pos);
 	}
 
 	void yaw(float theta)
@@ -87,15 +117,7 @@ public:
 		//orientation = orientation * qn;
 	}
 
-	void generateLocalToParentMatrix(Matrix4x4* out)
-	{
-		out->setupLocalToParent(pos,orientation);
-	}
-
-	void generateParentToLocalMatrix(Matrix4x4* out)
-	{
-		out->setupParentToLocal(pos,orientation);
-	}
+	
 
 	void translate(float x,float y,float z,TransformSpace ts = TS_PARENT)
 	{
@@ -126,6 +148,70 @@ public:
 	}
 
 
+	//Ogre中使用了catche保存了值，只有发送变化时才重新计算
+	//以后进行更改，加入缓存，应该能显著降低计算量
+	Quaternion getDerivedQrientation()
+	{
+		if (parent)
+		{
+			//将来进行更改，可以继承父类的旋转
+			return orientation;
+		}
+		else
+		{
+			return orientation;
+		}
+	}
+
+	Vector3 getDerivedPosition()
+	{
+		if (parent)
+		{
+			Matrix3x3 r(getDerivedQrientation());
+			return pos + pos * r;
+		}
+		else
+		{
+			return pos;
+		}
+	}
+
+	void generateLocalToParentMatrix(Matrix4x4* out)
+	{
+		out->setupLocalToParent(pos,orientation);
+	}
+
+	void generateLocalToWorldMatrix(Matrix4x4* out)
+	{
+		out->setupLocalToParent(getDerivedPosition(),getDerivedQrientation());
+	}
+
+	void generateParentToLocalMatrix(Matrix4x4* out)
+	{
+		out->setupParentToLocal(pos,orientation);
+	}
+
+	void generateWorldToLocalMatrix(Matrix4x4* out)
+	{
+		out->setupParentToLocal(getDerivedPosition(),getDerivedQrientation());
+	}
+
+	virtual  Node* createChildImpl(const char* name)
+	{
+		return new Node(name);
+	}
+
+	virtual Node* createChildImpl()
+	{
+		return new Node;
+	}
+
+	Node*		createChild(const char* name);
+	Node*		createChild();
+	Node*		removeChild(const char* name);
+	void		destroyChild(const char* name);
+
+	void		destroyAllChild();
 };
 
 #endif

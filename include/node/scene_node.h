@@ -1,69 +1,68 @@
-#ifndef __SCENE_NODE__
-#define __SCENE_NODE__
+#ifndef __SCENE_NODE_CONTAINER__
+#define __SCENE_NODE_CONTAINER__
 
-#include "dx/dx_renderer.h"
-#include "node/node.h"
-#include "node/attachable.h"
+#include <map>
 #include <list>
+#include "dx/dx_renderer.h"
+#include "attachable.h"
 
-class SceneNode : public Node , public IRenderable
+
+class SceneNode : public IRenderable,public Node
 {
 public:
 	SceneNode(const char* name)
+		:Node(name)
 	{
-		mName = new char[strlen(name)+1];
-		strcpy(mName,name);
-	}
-	virtual ~SceneNode()
-	{
-		safe_delete(mName);
+		
 	}
 
-	//override to set the render state if necessary
-	virtual void preRender(DxRenderer* renderer)
-	{
-	}
-	//override to render object
-	virtual void onRender(DxRenderer* renderer)
-	{
-		AttachedObjectListIter end = mAttachedObjects.end();
-		for (AttachedObjectListIter iter=mAttachedObjects.begin(); iter!=end; ++iter)
-		{
-			(*iter)->preRender(renderer);
-			(*iter)->onRender(renderer);
-			(*iter)->postRender(renderer);
-		}
-	}
-
-	//override to reset the render state if necessary
-	virtual void postRender(DxRenderer* renderer)
+	SceneNode()
+		:Node()
 	{
 	}
 
-	void attach(AttachableObject* obj)
+	~SceneNode() {destroyAllChild();}
+
+	Node*		createChildImpl()
+	{
+		return new SceneNode;
+	}
+	Node*		createChildImpl(const char* name)
+	{
+		return new SceneNode(name);
+	}
+
+	void		preRender(DxRenderer* render)
+	{}
+
+	void		onRender(DxRenderer* render);
+
+	void		postRender(DxRenderer* render)
+	{}
+
+	void attachObject(AttachableObject* obj)
 	{
 		mAttachedObjects.push_back(obj);
 		obj->notifyAttached(this);
 	}
 
-	void detach(AttachableObject* obj)
+	void detachObject(AttachableObject* obj)
 	{
 		AttachedObjectListIter end = mAttachedObjects.end();
 		for (AttachedObjectListIter iter=mAttachedObjects.begin(); iter!=end; ++iter)
 		{
 			if (*iter == obj)
 			{
+				obj->notifyAttached(0);
 				mAttachedObjects.erase(iter);
 				return;
 			}
 		}
 	}
 
-	char* getName() const {return mName;}
+	virtual void update(float delta);
 
 protected:
-	char*											mName;
-	
 	typedef std::list<AttachableObject*>			AttachedObjectList;
 	typedef AttachedObjectList::iterator			AttachedObjectListIter;
 

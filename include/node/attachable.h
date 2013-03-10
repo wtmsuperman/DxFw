@@ -12,12 +12,26 @@ public:
 	AttachableObject()
 		:mParent(0)
 	{
+		mName = 0;
+	}
+
+	AttachableObject(const char* name)
+	{
+		mName = new char[strlen(name) +1];
+		strcpy(mName,name);
+	}
+
+	~AttachableObject()
+	{
+		safe_deleteArray(mName);
 	}
 
 	virtual void notifyAttached(Node* node)
 	{
 		mParent = node;
 	}
+
+	virtual void update(float delta) = 0;
 
 	Node* getParent()
 	{
@@ -26,6 +40,7 @@ public:
 
 protected:
 	Node*	mParent;
+	char*	mName;
 };
 
 #endif

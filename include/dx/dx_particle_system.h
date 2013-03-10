@@ -98,7 +98,7 @@ public:
 	virtual void onRender(DxRenderer* renderer);
 	virtual void postRender(DxRenderer* renderer);
 
-	virtual bool update(float delta);
+	virtual void update(float delta);
 	
 private:
 	typedef std::list<DxParticleAttribute*> FreeParticleQueue;

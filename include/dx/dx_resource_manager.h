@@ -37,6 +37,12 @@ public:
 	void		releaseAllMaterial();
 	void		releaseAllBuffer();
 
+	DxTexture*	getTexture(const char* name);
+	DxModel*	getModel(const char* name);
+	DxMaterial* getMaterial(const char* name);
+	DxMesh*		getMesh(const char* name);
+	DxBuffer*	getBuffer(const char* name);
+
 	~DxResourceGroup();
 public:
 	typedef std::string								str_key;
@@ -71,6 +77,7 @@ public:
 						DxResourceManager(IDirect3DDevice9* device);
 						~DxResourceManager();
 	DxResourceGroup*	createResourceGroup(const char* groupName);
+	DxResourceGroup*	getResourceGroup(const char* groupName);
 
 	DxBuffer*			createStaticBuffer(const char* groupName,const char* name,DWORD fvf,D3DPRIMITIVETYPE primType
 										,unsigned int vertexNum,unsigned int indicesNum

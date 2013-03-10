@@ -397,6 +397,38 @@ void DxResourceGroup::release()
 	releaseAllModel();
 }
 
+DxModel* DxResourceGroup::getModel(const char* name)
+{
+	ModelIter iter = mModels.find(name);
+	return iter == mModels.end() ? 0 : &iter->second;
+}
+
+DxTexture* DxResourceGroup::getTexture(const char* name)
+{
+	TextureIter iter = mTextures.find(name);
+	return iter == mTextures.end() ? 0 : &iter->second;
+}
+
+DxMaterial* DxResourceGroup::getMaterial(const char* name)
+{
+	MaterialIter iter = mMaterials.find(name);
+	return iter == mMaterials.end() ? 0 : &iter->second;
+}
+
+DxBuffer* DxResourceGroup::getBuffer(const char* name)
+{
+	BufferIter iter = mBuffers.find(name);
+	return iter == mBuffers.end() ? 0 : &iter->second;
+}
+
+DxMesh* DxResourceGroup::getMesh(const char* name)
+{
+	MeshIter iter = mMeshes.find(name);
+	return iter == mMeshes.end() ? 0 : &iter->second;
+}
+
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 DxResourceManager::DxResourceManager(IDirect3DDevice9* device)
@@ -412,6 +444,15 @@ DxResourceGroup* DxResourceManager::createResourceGroup(const char*name)
 	DxResourceGroup* group = new DxResourceGroup(mDevice,name);
 	mResourceGroups[name] = group;
 	return group;
+}
+
+DxResourceGroup* DxResourceManager::getResourceGroup(const char* name)
+{
+	ResourceGroupIter iter = mResourceGroups.find(name);
+	if (iter == mResourceGroups.end())
+		return 0;
+	else
+		return iter->second;
 }
 
 DxBuffer* DxResourceManager::createStaticBuffer(const char* groupName,const char* name

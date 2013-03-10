@@ -165,7 +165,7 @@ DxParticleSystem::~DxParticleSystem()
 	release();
 }
 
-bool DxParticleSystem::update(float delta)
+void DxParticleSystem::update(float delta)
 {
 	ActiveParticleListIter end = mActiveParticles.end();
 	
@@ -187,7 +187,6 @@ bool DxParticleSystem::update(float delta)
 	add(delta);
 	affect(delta);
 	logToScreen("particle","%d",mActiveParticles.size());
-	return true;
 }
 
 void DxParticleSystem::affect(float delta)
@@ -200,7 +199,7 @@ void DxParticleSystem::affect(float delta)
 
 bool DxParticleSystem::isAlive() const
 {
-	return !mActiveParticles.empty();
+	return !mActiveParticles.empty() && (mEmitter->enable || mEmitter->repeatDelay != 0.0f);
 }
 
 void DxParticleSystem::setEmitter(DxParticleEmitter* emitter)
