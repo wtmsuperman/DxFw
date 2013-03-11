@@ -233,8 +233,8 @@ bool DxParticleSystem::add(float timeDelta)
 		// transform to world space
 		if (mParent)
 		{
-			p->position = mParent->getPosition() + p->position;
-			Matrix3x3 rotation(mParent->getOrientation());
+			p->position = mParent->getDerivedPosition() + p->position;
+			Matrix3x3 rotation(mParent->getDerivedOrientation());
 			p->velocity *= rotation;
 		}
 		//p->velocity = mEmitter.direction * randf(mEmitter.minVelocity,mEmitter.maxVelocity);

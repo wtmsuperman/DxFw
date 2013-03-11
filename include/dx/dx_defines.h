@@ -8,6 +8,7 @@
 #include <mathlib.h>
 #include <dinput.h>
 #include <assert.h>
+#include <DxErr.h>
 
 #define MAX_TEXTURE 1
 

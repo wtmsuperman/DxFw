@@ -78,7 +78,11 @@ DxBuffer* DxResourceGroup::createStaticBuffer(const char* name,DWORD fvf,D3DPRIM
 DxTexture* DxResourceGroup::loadTexture(const char* fileName)
 {
 
-	assert(mTextures.find(fileName) == mTextures.end() && "already exists this texture");
+	if (mTextures.find(fileName) != mTextures.end())
+	{
+		return &mTextures[fileName];
+	}
+
 	if (fileName == 0)
 		return 0;
 
@@ -162,11 +166,18 @@ DxModel* DxResourceGroup::loadXModel(const char* fileName)
 	assert(mModels.find(fileName) == mModels.end() && "already exists this model");
 
 	if (fileName == 0)
+	{
+		assert(false && "wrong file name");
 		return 0;
+	}
 
 	size_t fl = strlen(fileName);
 	if (fl == 0)
+	{
+		assert(false && "wrong file name");
 		return 0;
+	}
+		
 
 	DxModel model;
 	model.groupName = mGroupName;
@@ -193,6 +204,8 @@ DxModel* DxResourceGroup::loadXModel(const char* fileName)
 
 	if(FAILED(hr))
 	{
+		MessageBox(0,DXGetErrorDescription(hr),"",MB_OK);
+		assert(false && "load model failed");
 		return 0;
 	}
 
@@ -222,7 +235,7 @@ DxModel* DxResourceGroup::loadXModel(const char* fileName)
 			if( mtrls[i].pTextureFilename != 0 )
 			{
 				// yes, load the texture for the ith subset
-				DxTexture* tex = loadTexture(mtrls[i].pTextureFilename);
+				tex = loadTexture(mtrls[i].pTextureFilename);
 			}
 
 			model.mtrls[i] = createMaterial(mtrlName,mtrls[i].MatD3D,tex);
@@ -265,18 +278,15 @@ void DxResourceGroup::releaseMaterial(const char* name)
 	MaterialIter iter = mMaterials.find(name);
 	DxMaterial& mtrl = iter->second;
 	safe_deleteArray(mtrl.name);
-	for (DWORD i=0; i<MAX_TEXTURE; ++i)
-	{
-		releaseTexture(mtrl.textures[i]->name);
-	}
 	mMaterials.erase(iter);
 }
 
 
 void DxResourceGroup::releaseTexture(const char* name)
 {
-	assert(mTextures.find(name) != mTextures.end() && "do not have that texture");
 	TextureIter iter = mTextures.find(name);
+	if (iter == mTextures.end())
+		return;
 	DxTexture& tex = iter->second;
 	safe_Release(tex.data);
 	safe_deleteArray(tex.name);
@@ -332,11 +342,6 @@ void DxResourceGroup::releaseAllMaterial()
 		DxMaterial& mtrl = iter->second;
 
 		safe_deleteArray(mtrl.name);
-		for (DWORD i=0; i<MAX_TEXTURE; ++i)
-		{
-			if (mtrl.textures[i] != 0)
-				releaseTexture(mtrl.textures[i]->name);
-		}
 	}
 
 	mMaterials.clear();

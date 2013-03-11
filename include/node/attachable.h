@@ -38,6 +38,11 @@ public:
 		return mParent;
 	}
 
+	const char* getName() const
+	{
+		return mName;
+	}
+
 protected:
 	Node*	mParent;
 	char*	mName;

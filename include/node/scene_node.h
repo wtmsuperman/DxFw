@@ -40,25 +40,12 @@ public:
 	void		postRender(DxRenderer* render)
 	{}
 
-	void attachObject(AttachableObject* obj)
-	{
-		mAttachedObjects.push_back(obj);
-		obj->notifyAttached(this);
-	}
+	void attachObject(AttachableObject* obj);
 
-	void detachObject(AttachableObject* obj)
-	{
-		AttachedObjectListIter end = mAttachedObjects.end();
-		for (AttachedObjectListIter iter=mAttachedObjects.begin(); iter!=end; ++iter)
-		{
-			if (*iter == obj)
-			{
-				obj->notifyAttached(0);
-				mAttachedObjects.erase(iter);
-				return;
-			}
-		}
-	}
+	void detachObject(AttachableObject* obj);
+	void detachObject(const char* name);
+
+	AttachableObject* getObject(const char* name);
 
 	virtual void update(float delta);
 

@@ -1,6 +1,7 @@
 #include <dx/dxfw.h>
 #include <node/scene_node.h>
 #include <time.h>
+#include <dx/dx_logging.h>
 
 DxFw*	gEngine;
 Node*	gCamera;
@@ -11,6 +12,25 @@ public:
 	Entity(DxModel* model)
 	{
 		this->mXmodel = model;
+	}
+
+	void setBoundingbox(const AABB3& boudingbox)
+	{
+		mBoundingbox = boudingbox;
+	}
+
+	AABB3 getWorldAABB()
+	{
+		if (mParent)
+		{
+			Matrix4x4 m;
+			mParent->generateLocalToWorldMatrix(&m);
+			mBoundingbox.transform(m);
+		}
+		else
+		{
+			mBoundingbox.transform(Matrix4x4::IDENTITY);
+		}
 	}
 
 	virtual void preRender(DxRenderer* renderer)
@@ -47,7 +67,57 @@ public:
 	}
 	
 	DxModel*	mXmodel;
+	AABB3		mBoundingbox;
 };
+
+class GameEntity
+{
+public:
+	SceneNode*	node;
+	float		speed;
+	bool		isAlive;
+	AABB3		boundingbox;
+	int			type;
+public:
+	virtual void update(float delta) = 0;
+
+	virtual bool collisionTest(GameEntity* entity)
+	{
+		if ( entity->boundingbox.intersects(entity->boundingbox) )
+		{
+			this->collisionImpl(entity);
+			entity->collisionImpl(this);
+			return true;
+		}
+		return false;
+	}
+
+	virtual void collisionImpl(GameEntity* entity) = 0;
+};
+
+class MyShip : public GameEntity
+{
+public:
+	MyShip(Node* parent)
+	{
+		node =(SceneNode*) parent->createChild("myship");
+		node->attachObject(new Entity(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x")));
+		node->yaw(PI);
+		speed = 100.0f;
+	}
+
+	virtual void update(float delta)
+	{
+		//更新状态
+	}
+
+	virtual void collisionImpl(GameEntity* entity)
+	{
+		//实现碰撞
+	}
+};
+
+MyShip*		gPlayer;
 
 void initEngine(WinInfo& info)
 {
@@ -87,12 +157,13 @@ void initEnvironment()
 	device->SetSamplerState(0,D3DSAMP_MIPFILTER,D3DTEXF_POINT);
 
 	gEngine->getRenderer()->setLight(0,&light);
+	//gEngine->getRenderer()->enableLight(false);
 }
 
 void initCamera()
 {
 	gCamera = new Node;
-	gCamera->setPosition(0.0f,100.0f,0.0f);
+	gCamera->setPosition(0.0f,50.0f,-40.0f);
 	gCamera->lookAt(0.0f,0.0f,0.0f);
 }
 
@@ -117,6 +188,37 @@ void releaseAll()
 	delete gEngine;
 }
 
+void processInput(float delta)
+{
+	IInputSystem* input = gEngine->getInputSystem();
+
+	if (input->keyDown(DIK_F5))
+	{
+		gEngine->saveScreenshot();
+		return;
+	}
+
+	Vector3 walk = Vector3::ZERO;
+	if (input->keyDown(DIK_W))
+	{
+		walk.z += gPlayer->speed;
+	}
+	if (input->keyDown(DIK_S))
+	{
+		walk.z -= gPlayer->speed;
+	}
+	if (input->keyDown(DIK_A))
+	{
+		walk.x -= gPlayer->speed;
+	}
+	if (input->keyDown(DIK_D))
+	{
+		walk.x += gPlayer->speed;
+	}
+	walk *= delta;
+	gPlayer->node->translate(walk,Node::TS_LOCAL);
+}
+
 int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 {
 	gEngine = new DxFw;
@@ -133,17 +235,21 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 
 	DxRenderer* renderer = gEngine->getRenderer();
 	IInputSystem* inputSys = gEngine->getInputSystem();
+	GUISystem* guisys = GUISystem::getSingletonPtr();
+	guisys->initOnce(*gEngine);
 
+	loggingInit(guisys);
+	
 	SceneNode* root = new SceneNode("root");
-	root->attachObject(new Entity(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x")));
 	root->yaw(PI);
+	gPlayer = new MyShip(root);
 	
 	DxParticleSystem ps;
-	loadParticleSystem(&ps,gEngine,"media/particle/fire.particle");
+	loadParticleSystem(&ps,gEngine,"media/particle/ship_gas.lua");
 
-	SceneNode* fire = (SceneNode*)root->createChild("fire");
+	SceneNode* fire = (SceneNode*)gPlayer->node->createChild("gas");
 	fire->attachObject(&ps);
-	fire->setPosition(0.0f,0.0f,-10.0);
+	fire->setPosition(0.0f,0.0f,-8.0);
 
 	MSG msg;
 	while (true)
@@ -153,11 +259,12 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 
 		renderer->beginScene();
 		renderer->render(root);
+		guisys->render();
 		renderer->endScene();
 
 		float delta = getTimeSinceLastFrame();
 		root->update(delta);
-
+		processInput(delta);
 		inputSys->capture();
 		renderer->present();
 		messagePump(&msg);

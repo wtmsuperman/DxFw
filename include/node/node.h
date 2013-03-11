@@ -3,6 +3,7 @@
 #include "mathlib.h"
 #include <map>
 #include <dx/dx_defines.h>
+#include <dx/dx_logging.h>
 
 class Node
 {
@@ -10,7 +11,8 @@ public:
 	enum TransformSpace
 	{
 		TS_PARENT,
-		TS_LOCAL
+		TS_LOCAL,
+		TS_WORLD
 	};
 protected:
 	Vector3 pos;
@@ -26,9 +28,10 @@ protected:
 public:
 
 	Node()
-		:pos(0.0f,0.0f,0.0f),orientation(1.0f,0.0f,0.0f,0.0f),name(0),parent(0)
+		:pos(0.0f,0.0f,0.0f),orientation(1.0f,0.0f,0.0f,0.0f),parent(0)
 	{
-
+		name = new char[5];
+		strcpy(name,"null");
 	}
 
 	Node(const char* name)
@@ -113,6 +116,9 @@ public:
 		case TS_LOCAL:
 			orientation = orientation * qn;
 			break;
+		case TS_WORLD:
+			orientation = orientation * conjugate(getDerivedOrientation()) * qn * getDerivedOrientation();
+			break;
 		};
 		//orientation = orientation * qn;
 	}
@@ -134,6 +140,16 @@ public:
 		case TS_LOCAL:
 			pos += v * Matrix3x3(orientation);
 			break;
+		case TS_WORLD:
+			if (parent)
+			{
+				Vector3 v2= v * Matrix3x3(conjugate(parent->getDerivedOrientation()));
+				pos += v2;
+			}
+			else
+			{
+				pos += v;
+			}
 		}
 	}
 
@@ -150,7 +166,7 @@ public:
 
 	//Ogre中使用了catche保存了值，只有发送变化时才重新计算
 	//以后进行更改，加入缓存，应该能显著降低计算量
-	Quaternion getDerivedQrientation()
+	Quaternion getDerivedOrientation() const
 	{
 		if (parent)
 		{
@@ -163,12 +179,12 @@ public:
 		}
 	}
 
-	Vector3 getDerivedPosition()
+	Vector3 getDerivedPosition() const
 	{
 		if (parent)
 		{
-			Matrix3x3 r(getDerivedQrientation());
-			return pos + pos * r;
+			Matrix3x3 r(getDerivedOrientation());
+			return parent->getDerivedPosition() + (pos * r);
 		}
 		else
 		{
@@ -183,7 +199,7 @@ public:
 
 	void generateLocalToWorldMatrix(Matrix4x4* out)
 	{
-		out->setupLocalToParent(getDerivedPosition(),getDerivedQrientation());
+		out->setupLocalToParent(getDerivedPosition(),getDerivedOrientation());
 	}
 
 	void generateParentToLocalMatrix(Matrix4x4* out)
@@ -193,7 +209,7 @@ public:
 
 	void generateWorldToLocalMatrix(Matrix4x4* out)
 	{
-		out->setupParentToLocal(getDerivedPosition(),getDerivedQrientation());
+		out->setupParentToLocal(getDerivedPosition(),getDerivedOrientation());
 	}
 
 	virtual  Node* createChildImpl(const char* name)
@@ -209,6 +225,7 @@ public:
 	Node*		createChild(const char* name);
 	Node*		createChild();
 	Node*		removeChild(const char* name);
+	Node*		getChild(const char* name);
 	void		destroyChild(const char* name);
 
 	void		destroyAllChild();

@@ -15,7 +15,7 @@ Node* Node::createChild()
 	assert(mNodes.find(name) == mNodes.end() && "already exists this node");
 	Node* node = createChildImpl();
 	node->parent = this;
-	mNodes[name] = node;
+	mNodes["null"] = node;
 	return node;
 }
 
@@ -26,6 +26,12 @@ Node* Node::removeChild(const char* name)
 	iter->second->parent = 0;
 	mNodes.erase(iter);
 	return iter->second;
+}
+
+Node* Node::getChild(const char* name)
+{
+	assert(mNodes.find(name) != mNodes.end() && "this node do not exists");
+	return mNodes[name];
 }
 
 void Node::destroyChild(const char* name)

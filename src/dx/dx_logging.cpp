@@ -9,8 +9,13 @@ static bool g_logEnable = true;
 
 typedef std::map<std::string,std::string>::iterator LogginIter;
 
-void loggingInit(GUILabel* label)
+void loggingInit(GUISystem* guisys)
 {
+	GUILayout* layout = guisys->createLayout(0);
+	DxFont* font = guisys->createFont("",15,false,15,0);
+	GUILabel* label = layout->createLabel(0,0,800,600,0,0);
+	label->setColor(0xffff0000);
+	guisys->changeCurrentLayout(0);
 	g_label = label;
 }
 

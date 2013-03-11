@@ -6,13 +6,13 @@ void SceneNode::onRender(DxRenderer* renderer)
 	AttachedObjectListIter end = mAttachedObjects.end();
 	for (AttachedObjectListIter iter=mAttachedObjects.begin(); iter!=end; ++iter)
 	{
-			(*iter)->preRender(renderer);
-			(*iter)->onRender(renderer);
-			(*iter)->postRender(renderer);
+		(*iter)->preRender(renderer);
+		(*iter)->onRender(renderer);
+		(*iter)->postRender(renderer);
 	}
 
 	//render child
-	
+
 	NodeIter node_end = mNodes.end();
 	for (NodeIter iter = mNodes.begin(); iter != node_end; ++iter)
 	{
@@ -28,11 +28,11 @@ void SceneNode::update(float delta)
 	AttachedObjectListIter end = mAttachedObjects.end();
 	for (AttachedObjectListIter iter=mAttachedObjects.begin(); iter!=end; ++iter)
 	{
-			(*iter)->update(delta);
+		(*iter)->update(delta);
 	}
 
 	//render child
-	
+
 	NodeIter node_end = mNodes.end();
 	for (NodeIter iter = mNodes.begin(); iter != node_end; ++iter)
 	{
@@ -40,3 +40,50 @@ void SceneNode::update(float delta)
 	}
 }
 
+void SceneNode::attachObject(AttachableObject* obj)
+{		
+	assert(getObject(obj->getName())==0 && "already exist node");
+	mAttachedObjects.push_back(obj);
+	obj->notifyAttached(this);
+}
+
+void SceneNode::detachObject(AttachableObject* obj)
+{
+	AttachedObjectListIter end = mAttachedObjects.end();
+	for (AttachedObjectListIter iter=mAttachedObjects.begin(); iter!=end; ++iter)
+	{
+		if (*iter == obj)
+		{
+			obj->notifyAttached(0);
+			mAttachedObjects.erase(iter);
+			return;
+		}
+	}
+}
+
+void SceneNode::detachObject(const char* name)
+{
+	AttachedObjectListIter end = mAttachedObjects.end();
+	for (AttachedObjectListIter iter=mAttachedObjects.begin(); iter!=end; ++iter)
+	{
+		if (strcmp(name,(*iter)->getName())== 0)
+		{
+			(*iter)->notifyAttached(0);
+			mAttachedObjects.erase(iter);
+			return;
+		}
+	}
+}
+
+AttachableObject* SceneNode::getObject(const char* name)
+{
+	AttachedObjectListIter end = mAttachedObjects.end();
+	for (AttachedObjectListIter iter=mAttachedObjects.begin(); iter!=end; ++iter)
+	{
+		if (strcmp(name,(*iter)->getName())== 0)
+		{
+			return *iter;
+		}
+	}
+	return 0;
+}
