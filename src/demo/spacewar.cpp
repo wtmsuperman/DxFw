@@ -3,6 +3,9 @@
 #include <time.h>
 #include <dx/dx_logging.h>
 
+#include <map>
+#include <list>
+
 class BulletManager;
 
 DxFw*	gEngine;
@@ -182,7 +185,7 @@ class BulletManager : public AttachableObject
 {
 private:
 	typedef std::list<Bullet*>					Bullets;
-	typedef std::map<int,Bullets*>				BulletsMap;
+	typedef std::map<int,Bullets>				BulletsMap;
 	typedef Bullets::iterator					BulletsIter;
 	typedef BulletsMap::iterator				BulletsMapIter;
 	typedef std::map<int,DxTexture*>			TextureMap;
@@ -202,7 +205,7 @@ private:
 		BulletsMapIter end = bullets.end();
 		for (BulletsMapIter iter=bullets.begin(); iter!=end; ++iter)
 		{
-			Bullets& bulletlist = *(iter->second);
+			Bullets& bulletlist = iter->second;
 			if (bulletlist.empty())
 				continue;
 			else
@@ -231,17 +234,17 @@ private:
 		}
 	}
 
-	void update(BulletsMap bullets,float delta)
+	void update(BulletsMap& bullets,float delta)
 	{
 		BulletsMapIter end0 = bullets.end();
 		for (BulletsMapIter iter=bullets.begin(); iter!=end0; ++iter)
 		{
-			Bullets& bulletlist = *(iter->second);
+			Bullets& bulletlist = iter->second;
+			logToScreen("bullet","%d",bulletlist.size());
 			if (bulletlist.empty())
 				continue;
 			else
 			{
-				logToScreen("bullet","%d",bulletlist.size());
 				BulletsIter bulletEnd = bulletlist.end();
 				for (BulletsIter biter=bulletlist.begin(); biter!=bulletEnd;)
 				{
@@ -261,13 +264,13 @@ private:
 		}
 	}
 
-	void release(BulletsMap bullets)
+	void release(BulletsMap& bullets)
 	{
 		BulletsMapIter end0 = bullets.end();
 		//删除所有的子弹
 		for (BulletsMapIter iter=bullets.begin(); iter!=end0; ++iter)
 		{
-			Bullets& bulletlist = *(iter->second);
+			Bullets& bulletlist = iter->second;
 			if (bulletlist.empty())
 				continue;
 			else
@@ -283,12 +286,12 @@ private:
 		bullets.clear();
 	}
 
-	void collisionTest(BulletsMap bullets,GameEntity* entity)
+	void collisionTest(BulletsMap& bullets,GameEntity* entity)
 	{
 		BulletsMapIter end0 = bullets.end();
 		for (BulletsMapIter iter=bullets.begin(); iter!=end0; ++iter)
 		{
-			Bullets& bulletlist = *(iter->second);
+			Bullets& bulletlist = iter->second;
 			if (bulletlist.empty())
 				continue;
 			else
@@ -402,19 +405,11 @@ public:
 		//敌人还是自己
 		if (type == 0)
 		{
-			if (mEnemyBullets.count(bullet->category) == 0)
-			{
-				mEnemyBullets[bullet->category] = new Bullets;
-			}
-			mEnemyBullets[bullet->category]->push_back(bullet);
+			mEnemyBullets[bullet->category].push_back(bullet);
 		}
 		else if (type == 1)
 		{
-			if (mMyBullets.count(bullet->category) == 0)
-			{
-				mMyBullets[bullet->category] = new Bullets;
-			}
-			mMyBullets[bullet->category]->push_back(bullet);
+			mMyBullets[bullet->category].push_back(bullet);
 			return;
 		}
 	}
