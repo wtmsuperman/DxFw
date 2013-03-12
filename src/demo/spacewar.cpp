@@ -182,7 +182,7 @@ class BulletManager : public AttachableObject
 {
 private:
 	typedef std::list<Bullet*>					Bullets;
-	typedef std::map<int,Bullets>				BulletsMap;
+	typedef std::map<int,Bullets*>				BulletsMap;
 	typedef Bullets::iterator					BulletsIter;
 	typedef BulletsMap::iterator				BulletsMapIter;
 	typedef std::map<int,DxTexture*>			TextureMap;
@@ -202,7 +202,7 @@ private:
 		BulletsMapIter end = bullets.end();
 		for (BulletsMapIter iter=bullets.begin(); iter!=end; ++iter)
 		{
-			Bullets& bulletlist = iter->second;
+			Bullets& bulletlist = *(iter->second);
 			if (bulletlist.empty())
 				continue;
 			else
@@ -236,7 +236,7 @@ private:
 		BulletsMapIter end0 = bullets.end();
 		for (BulletsMapIter iter=bullets.begin(); iter!=end0; ++iter)
 		{
-			Bullets& bulletlist = iter->second;
+			Bullets& bulletlist = *(iter->second);
 			if (bulletlist.empty())
 				continue;
 			else
@@ -250,7 +250,7 @@ private:
 					if (!bullet->isAlive)
 					{
 						biter = bulletlist.erase(biter);
-						//delete bullet;
+						delete bullet;
 					}
 					else
 					{
@@ -267,7 +267,7 @@ private:
 		//删除所有的子弹
 		for (BulletsMapIter iter=bullets.begin(); iter!=end0; ++iter)
 		{
-			Bullets& bulletlist = iter->second;
+			Bullets& bulletlist = *(iter->second);
 			if (bulletlist.empty())
 				continue;
 			else
@@ -288,7 +288,7 @@ private:
 		BulletsMapIter end0 = bullets.end();
 		for (BulletsMapIter iter=bullets.begin(); iter!=end0; ++iter)
 		{
-			Bullets& bulletlist = iter->second;
+			Bullets& bulletlist = *(iter->second);
 			if (bulletlist.empty())
 				continue;
 			else
@@ -391,7 +391,6 @@ public:
 
 	void update(float delta)
 	{
-		logToScreen("bullet","%d",mMyBullets[1].size());
 		//update 己方的子弹
 		update(mMyBullets,delta);
 		//update 地方子弹
@@ -403,11 +402,19 @@ public:
 		//敌人还是自己
 		if (type == 0)
 		{
-			mEnemyBullets[bullet->category].push_back(bullet);
+			if (mEnemyBullets.count(bullet->category) == 0)
+			{
+				mEnemyBullets[bullet->category] = new Bullets;
+			}
+			mEnemyBullets[bullet->category]->push_back(bullet);
 		}
 		else if (type == 1)
 		{
-			mMyBullets[bullet->category].push_back(bullet);
+			if (mMyBullets.count(bullet->category) == 0)
+			{
+				mMyBullets[bullet->category] = new Bullets;
+			}
+			mMyBullets[bullet->category]->push_back(bullet);
 			return;
 		}
 	}
