@@ -125,12 +125,12 @@ public:
 
 	
 
-	void translate(float x,float y,float z,TransformSpace ts = TS_PARENT)
+	void translate(float x,float y,float z,TransformSpace ts = TS_WORLD)
 	{
 		translate(Vector3(x,y,z),ts);
 	}
 
-	void translate(const Vector3& v,TransformSpace ts = TS_PARENT)
+	void translate(const Vector3& v,TransformSpace ts = TS_WORLD)
 	{
 		switch (ts)
 		{

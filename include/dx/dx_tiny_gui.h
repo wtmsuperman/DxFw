@@ -137,6 +137,7 @@ public:
 	void				load(const TiXmlElement* root);
 	void				processGUI(int x,int y,bool mouseDown);
 	void				render();
+	void				notifyParent(GUISystem* parent) {mParent = parent;}
 private:
 	typedef std::vector<GUIControl*>	GUIContainer;
 	typedef GUIContainer::iterator		GUIIter;
@@ -145,6 +146,8 @@ private:
 	GUIContainer				mGUIControls;
 	DxResourceGroup*			mGUIResourceGroup;
 	DxRenderer*					mRenderer;
+
+	GUISystem*					mParent;
 
 	GUILayout(int id,DxResourceGroup* group,DxRenderer* renderer);
 	GUILayout(const GUILayout& r);

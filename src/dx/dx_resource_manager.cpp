@@ -11,6 +11,7 @@ DxResourceGroup::DxResourceGroup(IDirect3DDevice9* device,const char* groupName)
 
 DxResourceGroup::~DxResourceGroup()
 {
+	mParent->remove(mGroupName);
 	release();
 	safe_deleteArray(mGroupName);
 }
@@ -393,6 +394,11 @@ void DxResourceGroup::releaseAllModel()
 	mModels.clear();
 }
 
+void DxResourceGroup::notifyParent(DxResourceManager* parent)
+{
+	this->mParent = parent;
+}
+
 void DxResourceGroup::release()
 {
 	releaseAllBuffer();
@@ -448,6 +454,7 @@ DxResourceGroup* DxResourceManager::createResourceGroup(const char*name)
 
 	DxResourceGroup* group = new DxResourceGroup(mDevice,name);
 	mResourceGroups[name] = group;
+	group->notifyParent(this);
 	return group;
 }
 
@@ -575,21 +582,21 @@ void DxResourceManager::releaseResource(const char* groupName)
 	mResourceGroups[groupName]->release();
 }
 
-void DxResourceManager::releaseAndRemove(const char* groupName)
+DxResourceGroup* DxResourceManager::remove(const char* groupName)
 {
-	
 	ResourceGroupIter iter = mResourceGroups.find(groupName);
 	assert(iter != mResourceGroups.end() && "do not have that group");
-	iter->second->release();
+	DxResourceGroup* group = iter->second;
 	mResourceGroups.erase(iter);
+	return group;
 }
 
 void DxResourceManager::release()
 {
-	ResourceGroupIter end = mResourceGroups.end();
-	for (ResourceGroupIter iter = mResourceGroups.begin(); iter != end; ++iter)
+	//每次需要重新计算end
+	for (ResourceGroupIter iter = mResourceGroups.begin(); iter != mResourceGroups.end(); ++iter)
 	{
-		safe_delete(iter->second);
+		iter->second->release();
 	}
 
 	mResourceGroups.clear();

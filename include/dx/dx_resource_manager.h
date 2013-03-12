@@ -42,6 +42,7 @@ public:
 	DxMaterial* getMaterial(const char* name);
 	DxMesh*		getMesh(const char* name);
 	DxBuffer*	getBuffer(const char* name);
+	void		notifyParent(DxResourceManager* parent);
 
 	~DxResourceGroup();
 public:
@@ -66,6 +67,8 @@ private:
 	ModelMap				mModels;
 	char*					mGroupName;
 	IDirect3DDevice9*		mDevice;
+
+	DxResourceManager*		mParent;
 
 	DxResourceGroup(IDirect3DDevice9* device,const char* name);
 
@@ -102,7 +105,7 @@ public:
 	void				releaseAllBuffer(const char* groupName);
 
 	void				releaseResource(const char* groupName);
-	void				releaseAndRemove(const char* groupName);
+	DxResourceGroup*	remove(const char* groupName);
 
 	void				release();
 public:

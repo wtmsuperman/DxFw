@@ -72,6 +72,7 @@ GUILayout*	GUISystem::createLayout(int id)
 	sprintf(buffer,"gui_%d",id);
 	GUILayout* layout = new GUILayout(id,mResourceMgr->createResourceGroup(buffer),mRenderer);
 	mLayouts.push_back(layout);
+	layout->notifyParent(this);
 	return layout;
 }
 
@@ -96,7 +97,7 @@ void GUISystem::destroyLayout(int id)
 		if ( (*iter)->mID == id){
 			char buffer[32];
 			sprintf(buffer,"gui_%d",(*iter)->mID);
-			mResourceMgr->releaseAndRemove(buffer);
+			delete mResourceMgr->remove(buffer);
 			delete *iter;
 			mLayouts.erase(iter);
 			return;
@@ -140,7 +141,7 @@ void GUISystem::release()
 		GUILayout* layout = *iter;
 		char buffer[32];
 		sprintf(buffer,"gui_%d",layout->mID);
-		mResourceMgr->releaseAndRemove(buffer);
+		delete mResourceMgr->remove(buffer);
 		delete layout;
 	}
 	mLayouts.clear();
@@ -254,7 +255,7 @@ void GUISystem::load(const char* file)
 //
 
 GUILayout::GUILayout(int id,DxResourceGroup* group,DxRenderer* renderer)
-	:mID(id),mRenderer(renderer),mGUIResourceGroup(group)
+	:mID(id),mRenderer(renderer),mGUIResourceGroup(group),mParent(0)
 {
 
 }

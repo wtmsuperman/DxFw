@@ -3,8 +3,11 @@
 #include <time.h>
 #include <dx/dx_logging.h>
 
+class BulletManager;
+
 DxFw*	gEngine;
 Node*	gCamera;
+BulletManager* gBulletMgr;
 
 class Entity : public AttachableObject
 {
@@ -70,6 +73,8 @@ public:
 	AABB3		mBoundingbox;
 };
 
+
+
 class GameEntity
 {
 public:
@@ -93,6 +98,331 @@ public:
 	}
 
 	virtual void collisionImpl(GameEntity* entity) = 0;
+
+	// transform to world space
+	virtual AABB3 getWorldAABB3()
+	{
+		Matrix4x4 m;
+		AABB3 box;
+		m.setupLocalToParent(node->getDerivedPosition(),node->getDerivedOrientation());
+		box.setToTransformedBox(boundingbox,m);
+		return box;
+	}
+};
+
+struct BulletVertex
+{
+	float x,y,z;
+	DWORD color;
+	static const DWORD FVF = D3DFVF_XYZ | D3DFVF_DIFFUSE;
+};
+
+struct BulletAttribute
+{
+	float size;
+	float speed;
+	float harm;
+	int category;
+	DWORD color;
+};
+
+class Bullet
+{
+public:
+	Vector3	direction;
+	int category; //通过该值，决定使用的贴图
+	float size;
+	float speed;
+	float harm;
+	bool isAlive;
+	float time;
+	Vector3	position; //世界坐标
+
+	Bullet()
+	{
+		time = 1.0f;
+	}
+
+	// default implements
+	virtual void update(float delta)
+	{
+		if (time - delta <= 0.0f)
+		{
+			isAlive = false;
+		}
+		position += direction * speed * delta;
+		time -= delta;
+	}
+
+	// calculate harm
+	virtual float calcHarm()
+	{
+		return harm;
+	}
+
+	virtual bool collisionTest(GameEntity* entity)
+	{
+		// transform both to world space
+		Vector3 epos = entity->getWorldAABB3().center();
+		if (position.squaredDistance(epos) < size * size)
+		{
+			collisionImpl(entity);
+			return true;
+		}
+		return false;
+	}
+
+	virtual void collisionImpl(GameEntity* entity)
+	{
+		isAlive = false;
+	}
+};
+
+class BulletManager : public AttachableObject
+{
+private:
+	typedef std::list<Bullet*>					Bullets;
+	typedef std::map<int,Bullets>				BulletsMap;
+	typedef Bullets::iterator					BulletsIter;
+	typedef BulletsMap::iterator				BulletsMapIter;
+	typedef std::map<int,DxTexture*>			TextureMap;
+
+	BulletsMap									mMyBullets;
+	BulletsMap									mEnemyBullets;
+	TextureMap									mTextureMap;
+	DxResourceGroup*							mResourceGroup;
+private:
+	//子弹的数量一般不会太多，没有必要采用batch
+	IDirect3DVertexBuffer9*						mVertexBuffer;
+	static const int							MAX_BUFFER_SIZE = 512;
+
+private:
+	void renderBullets(DxRenderer* renderer,BulletsMap& bullets)
+	{
+		BulletsMapIter end = bullets.end();
+		for (BulletsMapIter iter=bullets.begin(); iter!=end; ++iter)
+		{
+			Bullets& bulletlist = iter->second;
+			if (bulletlist.empty())
+				continue;
+			else
+			{
+				BulletVertex* v;
+				IDirect3DDevice9* device = renderer->getDevice();
+				renderer->applyTexture(0,mTextureMap[iter->first]);
+				device->SetStreamSource(0,mVertexBuffer,0,sizeof(BulletVertex));
+				//不为空，第一个一定有值，取出size值
+				device->SetRenderState(D3DRS_POINTSIZE,FtoDW((*bulletlist.begin())->size));
+				UINT size = bulletlist.size();
+				UINT bufferSize = size * sizeof(BulletVertex);
+				mVertexBuffer->Lock(0,bufferSize,(void**)&v,0);
+				BulletsIter bulletEnd = bulletlist.end();
+				for (BulletsIter biter=bulletlist.begin(); biter!=bulletEnd; ++biter)
+				{
+					v->x = (*biter)->position.x;
+					v->y = (*biter)->position.y;
+					v->z = (*biter)->position.z;
+					v->color = 0xffffffff;
+					++v;
+				}
+				device->DrawPrimitive(D3DPT_POINTLIST,0,size);
+				mVertexBuffer->Unlock();
+			}
+		}
+	}
+
+	void update(BulletsMap bullets,float delta)
+	{
+		BulletsMapIter end0 = bullets.end();
+		for (BulletsMapIter iter=bullets.begin(); iter!=end0; ++iter)
+		{
+			Bullets& bulletlist = iter->second;
+			if (bulletlist.empty())
+				continue;
+			else
+			{
+				logToScreen("bullet","%d",bulletlist.size());
+				BulletsIter bulletEnd = bulletlist.end();
+				for (BulletsIter biter=bulletlist.begin(); biter!=bulletEnd;)
+				{
+					Bullet* bullet = *biter;
+					bullet->update(delta);
+					if (!bullet->isAlive)
+					{
+						biter = bulletlist.erase(biter);
+						//delete bullet;
+					}
+					else
+					{
+						++biter;
+					}
+				}
+			}
+		}
+	}
+
+	void release(BulletsMap bullets)
+	{
+		BulletsMapIter end0 = bullets.end();
+		//删除所有的子弹
+		for (BulletsMapIter iter=bullets.begin(); iter!=end0; ++iter)
+		{
+			Bullets& bulletlist = iter->second;
+			if (bulletlist.empty())
+				continue;
+			else
+			{
+				BulletsIter bulletEnd = bulletlist.end();
+				for (BulletsIter biter=bulletlist.begin(); biter!=bulletEnd;++biter)
+				{
+					delete (*biter);
+				}
+			}
+		}
+		//清空map
+		bullets.clear();
+	}
+
+	void collisionTest(BulletsMap bullets,GameEntity* entity)
+	{
+		BulletsMapIter end0 = bullets.end();
+		for (BulletsMapIter iter=bullets.begin(); iter!=end0; ++iter)
+		{
+			Bullets& bulletlist = iter->second;
+			if (bulletlist.empty())
+				continue;
+			else
+			{
+				BulletsIter bulletEnd = bulletlist.end();
+				for (BulletsIter biter=bulletlist.begin(); biter!=bulletEnd; ++biter)
+				{
+					(*biter)->collisionTest(entity);
+				}
+			}
+		}
+	}
+	
+public:
+	BulletManager()
+	{
+		mResourceGroup = 0;
+		mVertexBuffer = 0;
+	}
+
+	~BulletManager()
+	{
+		safe_delete(mResourceGroup);
+		safe_Release(mVertexBuffer);
+		release(mMyBullets);
+		release(mEnemyBullets);
+	}
+
+	bool init(DxFw* engine)
+	{
+		mResourceGroup = engine->getResourceManager()->createResourceGroup("bullets");
+		if (mResourceGroup == 0)
+			return false;
+		if (FAILED( engine->getDevice()->CreateVertexBuffer(MAX_BUFFER_SIZE * sizeof(ParticleVertex)
+		,D3DUSAGE_DYNAMIC | D3DUSAGE_POINTS | D3DUSAGE_WRITEONLY
+		,BulletVertex::FVF
+		,D3DPOOL_DEFAULT
+		,&mVertexBuffer
+		,0)))
+		{
+			return false;
+		}
+		return true;
+	}
+
+	void load(const char* scriptFile)
+	{
+		lua_State* L = lua_open();
+		luaL_loadfile(L,scriptFile);
+		lua_pcall(L,0,0,0);
+		lua_getglobal(L,"bullets");
+
+		lua_pushnil(L);
+		while (lua_next(L,1) != 0)
+		{
+			// key at -2,value at -1
+			int category = (int)lua_tonumber(L,-2);
+			mTextureMap[category] = mResourceGroup->loadTexture(lua_tostring(L,-1));
+			lua_pop(L,1);
+		}
+
+		lua_close(L);
+	}
+
+	void preRender(DxRenderer* renderer)
+	{
+	}
+	void onRender(DxRenderer* renderer)
+	{
+		DWORD light;
+		renderer->getDevice()->GetRenderState(D3DRS_LIGHTING,&light);
+		renderer->setRenderState(D3DRS_LIGHTING,false);
+		renderer->setRenderState(D3DRS_ZWRITEENABLE,false);
+		renderer->setRenderState(D3DRS_POINTSPRITEENABLE,true);
+		renderer->setRenderState(D3DRS_POINTSCALEENABLE,true);
+		renderer->setRenderState(D3DRS_POINTSIZE_MIN,FtoDW(0.f));
+
+		renderer->setRenderState(D3DRS_POINTSCALE_A,FtoDW(0.0f));
+		renderer->setRenderState(D3DRS_POINTSCALE_B,FtoDW(0.0f));
+		renderer->setRenderState(D3DRS_POINTSCALE_C,FtoDW(1.0f));
+
+		renderer->setTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);
+		renderer->setTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);
+		renderer->enableTransparent();
+		///////////////////////////////////////////////////////////////////////////
+
+		renderBullets(renderer,mMyBullets);
+		renderBullets(renderer,mEnemyBullets);
+
+		///////////////////////////////////////////////////////////////////////////
+		renderer->setRenderState(D3DRS_ZWRITEENABLE,true);
+		renderer->setRenderState(D3DRS_POINTSPRITEENABLE,false);
+		renderer->setRenderState(D3DRS_POINTSCALEENABLE,false);
+		renderer->setRenderState(D3DRS_LIGHTING,light);
+		renderer->disableTransparent();
+	}
+	void postRender(DxRenderer* renderer)
+	{
+	}
+
+	void update(float delta)
+	{
+		logToScreen("bullet","%d",mMyBullets[1].size());
+		//update 己方的子弹
+		update(mMyBullets,delta);
+		//update 地方子弹
+		update(mEnemyBullets,delta);
+	}
+
+	void addBullet(Bullet* bullet,int type)
+	{
+		//敌人还是自己
+		if (type == 0)
+		{
+			mEnemyBullets[bullet->category].push_back(bullet);
+		}
+		else if (type == 1)
+		{
+			mMyBullets[bullet->category].push_back(bullet);
+			return;
+		}
+	}
+
+	void collisionTest(GameEntity* entity,int type)
+	{
+		if (type == 0)
+		{
+			collisionTest(mEnemyBullets,entity);
+		}
+		else if (type == 1)
+		{
+			collisionTest(mMyBullets,entity);
+		}
+	}
 };
 
 class MyShip : public GameEntity
@@ -182,9 +512,9 @@ void loadResource()
 
 void releaseAll()
 {
-	gEngine->release();
-
+	delete gBulletMgr;
 	delete gCamera;
+	gEngine->release();
 	delete gEngine;
 }
 
@@ -214,6 +544,17 @@ void processInput(float delta)
 	if (input->keyDown(DIK_D))
 	{
 		walk.x += gPlayer->speed;
+	}
+	if (input->keyDown(DIK_J))
+	{
+		Bullet* b = new Bullet;
+		b->isAlive = true;
+		b->speed = 100.f;
+		b->direction = Vector3(0.0f,0.0f,1.0f);
+		b->position = gPlayer->node->getDerivedPosition();
+		b->size = 1.0f;
+		b->category = 1;
+		gBulletMgr->addBullet(b,1);
 	}
 	walk *= delta;
 	gPlayer->node->translate(walk,Node::TS_LOCAL);
@@ -250,6 +591,11 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	SceneNode* fire = (SceneNode*)gPlayer->node->createChild("gas");
 	fire->attachObject(&ps);
 	fire->setPosition(0.0f,0.0f,-8.0);
+
+	gBulletMgr = new BulletManager;
+	gBulletMgr->init(gEngine);
+	gBulletMgr->load("media/bullet/all.lua");
+	root->attachObject(gBulletMgr);
 
 	MSG msg;
 	while (true)
