@@ -770,7 +770,7 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	gPlayer = new MyShip(root);
 
 	SceneNode* fire = (SceneNode*)gPlayer->node->createChild("gas");
-	//fire->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/ship_gas.lua"));
+	fire->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/ship_gas.lua"));
 	fire->setPosition(0.0f,0.0f,-8.0);
 
 	gBulletMgr = new BulletManager;
