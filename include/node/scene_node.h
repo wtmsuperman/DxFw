@@ -4,6 +4,7 @@
 #include <map>
 #include <list>
 #include "dx/dx_renderer.h"
+#include "node.h"
 #include "attachable.h"
 
 
@@ -21,7 +22,7 @@ public:
 	{
 	}
 
-	~SceneNode() {destroyAllChild();}
+	virtual ~SceneNode() {destroyAllChild();}
 
 	Node*		createChildImpl()
 	{
@@ -43,7 +44,7 @@ public:
 	void attachObject(AttachableObject* obj);
 
 	void detachObject(AttachableObject* obj);
-	void detachObject(const char* name);
+	AttachableObject*  detachObject(const char* name);
 
 	AttachableObject* getObject(const char* name);
 

@@ -2,7 +2,7 @@
 #define __NODE_I_ATTACHABLE__
 
 #include <dx/dx_renderer.h>
-#include "node.h"
+#include "scene_node.h"
 
 // A class which implements this interface
 // could be attached by a node or scene node(or subclass of node)
@@ -21,9 +21,14 @@ public:
 		strcpy(mName,name);
 	}
 
-	~AttachableObject()
+	virtual ~AttachableObject()
 	{
 		safe_deleteArray(mName);
+
+		if (mParent)
+		{
+			((SceneNode*)mParent)->detachObject(this);
+		}
 	}
 
 	virtual void notifyAttached(Node* node)
@@ -43,8 +48,12 @@ public:
 		return mName;
 	}
 
+	virtual void preRender(DxRenderer* renderer){}
+	virtual void onRender(DxRenderer* renderer) {}
+	virtual void postRender(DxRenderer* renderer) {}
+
 protected:
-	Node*	mParent;
+	SceneNode*	mParent;
 	char*	mName;
 };
 

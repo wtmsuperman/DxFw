@@ -125,18 +125,18 @@ struct BulletAttribute
 	float size;
 	float speed;
 	float harm;
-	int category;
+	int id;
 	DWORD color;
+	DxTexture*	tex;
 };
 
 class Bullet
 {
 public:
 	Vector3	direction;
-	int category; //通过该值，决定使用的贴图
-	float size;
-	float speed;
-	float harm;
+	//子弹类型
+	int id;
+	BulletAttribute* attribute;
 	bool isAlive;
 	float time;
 	Vector3	position; //世界坐标
@@ -153,21 +153,21 @@ public:
 		{
 			isAlive = false;
 		}
-		position += direction * speed * delta;
+		position += direction * attribute->speed * delta;
 		time -= delta;
 	}
 
 	// calculate harm
 	virtual float calcHarm()
 	{
-		return harm;
+		return attribute->harm;
 	}
 
 	virtual bool collisionTest(GameEntity* entity)
 	{
 		// transform both to world space
 		Vector3 epos = entity->getWorldAABB3().center();
-		if (position.squaredDistance(epos) < size * size)
+		if (position.squaredDistance(epos) < attribute->size * attribute->size)
 		{
 			collisionImpl(entity);
 			return true;
@@ -188,11 +188,11 @@ private:
 	typedef std::map<int,Bullets>				BulletsMap;
 	typedef Bullets::iterator					BulletsIter;
 	typedef BulletsMap::iterator				BulletsMapIter;
-	typedef std::map<int,DxTexture*>			TextureMap;
+	typedef std::map<int,BulletAttribute>		BulletAttributeMap;
 
 	BulletsMap									mMyBullets;
 	BulletsMap									mEnemyBullets;
-	TextureMap									mTextureMap;
+	BulletAttributeMap							mBulletAttributeMap;
 	DxResourceGroup*							mResourceGroup;
 private:
 	//子弹的数量一般不会太多，没有必要采用batch
@@ -212,10 +212,10 @@ private:
 			{
 				BulletVertex* v;
 				IDirect3DDevice9* device = renderer->getDevice();
-				renderer->applyTexture(0,mTextureMap[iter->first]);
+				BulletAttribute& attr = mBulletAttributeMap[iter->first];
+				renderer->applyTexture(0,attr.tex);
 				device->SetStreamSource(0,mVertexBuffer,0,sizeof(BulletVertex));
-				//不为空，第一个一定有值，取出size值
-				device->SetRenderState(D3DRS_POINTSIZE,FtoDW((*bulletlist.begin())->size));
+				device->SetRenderState(D3DRS_POINTSIZE,FtoDW(attr.size));
 				UINT size = bulletlist.size();
 				UINT bufferSize = size * sizeof(BulletVertex);
 				mVertexBuffer->Lock(0,bufferSize,(void**)&v,0);
@@ -340,16 +340,75 @@ public:
 	void load(const char* scriptFile)
 	{
 		lua_State* L = lua_open();
-		luaL_loadfile(L,scriptFile);
+		if(luaL_loadfile(L,scriptFile))
+		{
+			assert(false && "load bullet script failed");
+		}
 		lua_pcall(L,0,0,0);
 		lua_getglobal(L,"bullets");
+
+		assert(lua_istable(L,-1) && "load bullet script");
 
 		lua_pushnil(L);
 		while (lua_next(L,1) != 0)
 		{
 			// key at -2,value at -1
-			int category = (int)lua_tonumber(L,-2);
-			mTextureMap[category] = mResourceGroup->loadTexture(lua_tostring(L,-1));
+			
+			assert(lua_istable(L,-1) && "load bullet script");
+			BulletAttribute attr;
+			//texture size harm speed id必须有
+			
+			//texture
+			lua_getfield(L,-1,"texture");
+			assert(lua_isstring(L,-1) && "load bullet texture");
+			attr.tex = mResourceGroup->loadTexture(lua_tostring(L,-1));
+			lua_pop(L,1);
+			//size
+			lua_getfield(L,-1,"size");
+			assert(lua_isnumber(L,-1) && "load bullet size");
+			attr.size = (float)lua_tonumber(L,-1);
+			lua_pop(L,1);
+			//speed
+			lua_getfield(L,-1,"speed");
+			assert(lua_isnumber(L,-1) && "load bullet speed");
+			attr.speed = (float)lua_tonumber(L,-1);
+			lua_pop(L,1);
+			//id
+			lua_getfield(L,-1,"id");
+			assert(lua_isnumber(L,-1) && "load bullet id");
+			attr.id = (int)lua_tonumber(L,-1);
+			lua_pop(L,1);
+			//harm
+			lua_getfield(L,-1,"harm");
+			assert(lua_isnumber(L,-1) && "load bullet harm");
+			attr.harm = (float)lua_tonumber(L,-1);
+			lua_pop(L,1);
+			//color
+			//color可以没有
+			lua_getfield(L,-1,"color");
+			if(lua_istable(L,-1))
+			{
+				lua_rawgeti(L,-1,1); //a
+				lua_rawgeti(L,-2,2); //r
+				lua_rawgeti(L,-3,3); //g
+				lua_rawgeti(L,-4,4); //b
+				float a = (float)lua_tonumber(L,-4);
+				float r = (float)lua_tonumber(L,-3);
+				float g = (float)lua_tonumber(L,-2);
+				float b = (float)lua_tonumber(L,-1);
+				attr.color = D3DCOLOR_COLORVALUE(r,g,b,a);
+				lua_pop(L,1); // pop b
+				lua_pop(L,1); // pop g
+				lua_pop(L,1); // pop r
+				lua_pop(L,1); // pop a
+			}
+			else
+			{
+				//default color
+				attr.color = 0xffffffff; 
+			}
+			lua_pop(L,1);
+			mBulletAttributeMap[attr.id] = attr;
 			lua_pop(L,1);
 		}
 
@@ -405,13 +464,20 @@ public:
 		//敌人还是自己
 		if (type == 0)
 		{
-			mEnemyBullets[bullet->category].push_back(bullet);
+			mEnemyBullets[bullet->id].push_back(bullet);
 		}
 		else if (type == 1)
 		{
-			mMyBullets[bullet->category].push_back(bullet);
+			mMyBullets[bullet->id].push_back(bullet);
 			return;
 		}
+	}
+
+	void initBullet(Bullet* bullet,int id)
+	{
+		BulletAttribute& attr = mBulletAttributeMap[id];
+		bullet->attribute = &attr;
+		bullet->id = id;
 	}
 
 	void collisionTest(GameEntity* entity,int type)
@@ -427,15 +493,122 @@ public:
 	}
 };
 
+class Weapon : public AttachableObject
+{
+public:
+	//射击延迟
+	float fireDelay;
+	//重复次数
+	int repeatTimes;
+	//重复延迟
+	float repeatDelay;
+	//剩余射击次数
+	int repeatRemains;
+	//射击延迟剩余
+	float fireDelayRemains;
+	//重复射击延迟剩余
+	float repeatDelayRemains;
+	//可以进行射击
+	bool ready;
+	//进行射击
+	bool firing;
+
+	Weapon(float FireDelay,int RepeatTimes,float RepeatDelay)
+	{
+		fireDelay = FireDelay;
+		repeatTimes = RepeatTimes;
+		repeatDelay = RepeatDelay;
+		fireDelayRemains = FireDelay;
+		repeatRemains = RepeatTimes;
+		repeatDelayRemains = RepeatDelay;
+		ready = true;
+		firing = false;
+	}
+
+	virtual void fire()
+	{
+		firing = true;
+	}
+
+	// add bullets to mgs
+	// 不同的武器有不同的发射方式，重载这个方法进行实现
+	virtual void createBullets()
+	{
+		Bullet* b = new Bullet;
+		b->position = getParent()->getDerivedPosition();
+		b->direction = Vector3(0.0f,0.0f,1.0);
+		gBulletMgr->initBullet(b,1);
+		gBulletMgr->addBullet(b,1);
+	}
+
+	virtual void update(float delta)
+	{
+			//发射子弹
+		logToScreen("fire","%d,%d",firing,ready);
+		logToScreen("fire delay","%f,%f",fireDelayRemains,repeatDelayRemains);
+
+		if (firing)
+		{
+			if(ready)
+			{
+				createBullets();
+				ready = false;
+				repeatRemains = repeatTimes;
+			}
+			if (repeatRemains > 0)
+			{
+				if (repeatDelayRemains > 0.0f)
+				{
+					repeatDelayRemains -= delta;
+				}
+				else
+				{
+					repeatDelayRemains = repeatDelay;
+					--repeatRemains;
+					createBullets();
+				}
+			}
+			else
+			{
+				firing = false;
+			}
+		}
+		
+
+		if (!ready)
+		{
+			if (fireDelayRemains > 0.0f)
+			{
+				fireDelayRemains -= delta;
+			}
+			else
+			{
+				fireDelayRemains = fireDelay;
+				ready = true;
+			}
+		}
+	}
+};
+
 class MyShip : public GameEntity
 {
 public:
 	MyShip(Node* parent)
+		:mWeapons(4)
 	{
 		node =(SceneNode*) parent->createChild("myship");
 		node->attachObject(new Entity(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x")));
 		node->yaw(PI);
 		speed = 100.0f;
+	}
+
+	~MyShip()
+	{
+		size_t size = mWeapons.size();
+		for (size_t i=0; i<size; ++i)
+		{
+			delete mWeapons[i];
+		}
 	}
 
 	virtual void update(float delta)
@@ -447,6 +620,24 @@ public:
 	{
 		//实现碰撞
 	}
+
+	void addWeapon(Weapon* weapon,int i)
+	{
+		char buffer[512];
+		sprintf_s(buffer,"weapon_%d",mWeapons.size());
+		SceneNode* weaponNode = (SceneNode*) node->createChild(buffer);
+		weaponNode->attachObject(weapon);
+		mWeapons[i] = weapon;
+	}
+
+	Weapon* getWeapon(int i)
+	{
+		return mWeapons[i];
+	}
+
+private:
+	//主角武器数量一般不会多，直接使用vector存储即可
+	std::vector<Weapon*> mWeapons;
 };
 
 MyShip*		gPlayer;
@@ -549,14 +740,7 @@ void processInput(float delta)
 	}
 	if (input->keyDown(DIK_J))
 	{
-		Bullet* b = new Bullet;
-		b->isAlive = true;
-		b->speed = 100.f;
-		b->direction = Vector3(0.0f,0.0f,1.0f);
-		b->position = gPlayer->node->getDerivedPosition();
-		b->size = 1.0f;
-		b->category = 1;
-		gBulletMgr->addBullet(b,1);
+		gPlayer->getWeapon(0)->fire();
 	}
 	walk *= delta;
 	gPlayer->node->translate(walk,Node::TS_LOCAL);
@@ -596,8 +780,10 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 
 	gBulletMgr = new BulletManager;
 	gBulletMgr->init(gEngine);
-	gBulletMgr->load("media/bullet/all.lua");
+	gBulletMgr->load("media/bullet/bullets0.lua");
 	root->attachObject(gBulletMgr);
+
+	gPlayer->addWeapon(new Weapon(0.4f,2,0.05f),0);
 
 	MSG msg;
 	while (true)

@@ -61,18 +61,20 @@ void SceneNode::detachObject(AttachableObject* obj)
 	}
 }
 
-void SceneNode::detachObject(const char* name)
+AttachableObject* SceneNode::detachObject(const char* name)
 {
 	AttachedObjectListIter end = mAttachedObjects.end();
 	for (AttachedObjectListIter iter=mAttachedObjects.begin(); iter!=end; ++iter)
 	{
 		if (strcmp(name,(*iter)->getName())== 0)
 		{
-			(*iter)->notifyAttached(0);
+			AttachableObject* obj = *iter;
+			obj->notifyAttached(0);
 			mAttachedObjects.erase(iter);
-			return;
+			return obj;
 		}
 	}
+	return 0;
 }
 
 AttachableObject* SceneNode::getObject(const char* name)

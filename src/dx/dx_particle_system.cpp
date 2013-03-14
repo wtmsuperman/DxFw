@@ -2,6 +2,7 @@
 #include "dx/dx_resource_manager.h"
 #include "dx/dx_logging.h"
 #include <script/scriptlib.h>
+#include <node/scene_node.h>
 
 //
 // Particle Emitter

@@ -41,7 +41,7 @@ public:
 		strcpy(this->name,name);
 	}
 
-	~Node()
+	virtual ~Node()
 	{
 		if (parent)
 		{
