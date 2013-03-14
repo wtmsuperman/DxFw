@@ -3,6 +3,7 @@
 #include "dx/dx_resource_manager.h"
 #include "dx/dx_d3d_input.h"
 #include "dx/dx_input_interface.h"
+#include "dx/dx_particle_system_manager.h"
 
 #include <time.h>
 
@@ -28,9 +29,32 @@ DxFw::~DxFw()
 	release();
 }
 
+bool DxFw::initAll(const DxParam& parm,HWND hwnd,HINSTANCE hist,bool exclusive)
+{
+	if (!initDx(parm))
+	{
+		return false;
+	}
+
+	if (!initInput(hwnd,hist,exclusive))
+	{
+		return false;
+	}
+
+	mParticleSystemMgr = getParticleSystemManager()->getSingletonPtr();
+	mParticleSystemMgr->initOnce(this);
+
+	return true;
+}
+
 bool DxFw::initInput(HWND hwnd,HINSTANCE hist,bool exclusive)
 {
 	return createD3DInputSystem(&mInputSys,hwnd,hist,exclusive);
+}
+
+DxParticleSystemManager* DxFw::getParticleSystemManager()
+{
+	return mParticleSystemMgr;
 }
 
 bool DxFw::initDx(const DxParam& param)
@@ -157,9 +181,11 @@ void DxFw::saveScreenshot()
 
 void DxFw::release()
 {
+	safe_delete(mParticleSystemMgr);
 	safe_delete(mRenderer);
 	safe_delete(mResourceMgr);
 	safe_Release(mDevice);
 	safe_Release(mDirect3D);
 	safe_release(mInputSys);
+	
 }

@@ -177,16 +177,16 @@ DxColorValue ColorFaderAffector::getColor()
 	return v;
 }
 
-static std::map<std::string,AffecotrCreator> creators;
+static std::map<std::string,AffectorCreator> creators;
 
-void registAffectorCreator(const char* name,AffecotrCreator creator)
+void registAffectorCreator(const char* name,AffectorCreator creator)
 {
 	creators[name] = creator;
 }
 
-AffecotrCreator getAffectorCreator(const char* name)
+AffectorCreator getAffectorCreator(const char* name)
 {
-	std::map<std::string,AffecotrCreator>::iterator iter;
+	std::map<std::string,AffectorCreator>::iterator iter;
 	iter = creators.find(name);
 	return iter != creators.end() ? iter->second : 0;
 }

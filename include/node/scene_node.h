@@ -5,7 +5,8 @@
 #include <list>
 #include "dx/dx_renderer.h"
 #include "node.h"
-#include "attachable.h"
+
+class AttachableObject;
 
 
 class SceneNode : public IRenderable,public Node
@@ -44,9 +45,6 @@ public:
 	void attachObject(AttachableObject* obj);
 
 	void detachObject(AttachableObject* obj);
-	AttachableObject*  detachObject(const char* name);
-
-	AttachableObject* getObject(const char* name);
 
 	virtual void update(float delta);
 

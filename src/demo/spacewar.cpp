@@ -422,6 +422,7 @@ public:
 	{
 		DWORD light;
 		renderer->getDevice()->GetRenderState(D3DRS_LIGHTING,&light);
+		renderer->setWorldTransform(Matrix4x4::IDENTITY);
 		renderer->setRenderState(D3DRS_LIGHTING,false);
 		renderer->setRenderState(D3DRS_ZWRITEENABLE,false);
 		renderer->setRenderState(D3DRS_POINTSPRITEENABLE,true);
@@ -648,17 +649,7 @@ void initEngine(WinInfo& info)
 	srand((unsigned int)time(0));
 
 	DxParam param = {info.isFullScreen,info.width,info.height,info.hwnd};
-	if (!gEngine->initDx(param))
-	{
-		MessageBox(0,"fuck","",MB_OK);
-	}
-
-	if (!gEngine->initInput(info.hwnd,info.hist,false))
-	{
-		MessageBox(0,"input failed","",MB_OK);
-	}
-
-	registAllDefaultAffectos();
+	gEngine->initAll(param,info.hwnd,info.hist,true);
 
 	gEngine->getRenderer()->setAsPerspectiveProjection(PI_OVER_2,(float)info.width / (float) info.height,1.0f,1000.0f);
 }
@@ -701,6 +692,8 @@ void loadResource()
 {
 	DxResourceGroup* shipGroup = gEngine->getResourceManager()->createResourceGroup("hero");
 	shipGroup->loadXModel("ship.x");
+	gEngine->getParticleSystemManager()->loadParticleSystem("media/particle/ship_gas.lua");
+	gEngine->getParticleSystemManager()->loadParticleSystem("media/particle/fire.lua");
 }
 
 void releaseAll()
@@ -742,6 +735,11 @@ void processInput(float delta)
 	{
 		gPlayer->getWeapon(0)->fire();
 	}
+
+	if (input->keyUp(DIK_K))
+	{
+		gPlayer->node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+	}
 	walk *= delta;
 	gPlayer->node->translate(walk,Node::TS_LOCAL);
 }
@@ -770,12 +768,9 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	SceneNode* root = new SceneNode("root");
 	root->yaw(PI);
 	gPlayer = new MyShip(root);
-	
-	DxParticleSystem ps;
-	loadParticleSystem(&ps,gEngine,"media/particle/ship_gas.lua");
 
 	SceneNode* fire = (SceneNode*)gPlayer->node->createChild("gas");
-	fire->attachObject(&ps);
+	//fire->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/ship_gas.lua"));
 	fire->setPosition(0.0f,0.0f,-8.0);
 
 	gBulletMgr = new BulletManager;
@@ -800,6 +795,7 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		root->update(delta);
 		processInput(delta);
 		inputSys->capture();
+		gEngine->getParticleSystemManager()->update();
 		renderer->present();
 		messagePump(&msg);
 		if (msg.message == WM_QUIT)

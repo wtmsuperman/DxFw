@@ -12,40 +12,26 @@ public:
 	AttachableObject()
 		:mParent(0)
 	{
-		mName = 0;
-	}
-
-	AttachableObject(const char* name)
-	{
-		mName = new char[strlen(name) +1];
-		strcpy(mName,name);
 	}
 
 	virtual ~AttachableObject()
 	{
-		safe_deleteArray(mName);
-
 		if (mParent)
 		{
 			((SceneNode*)mParent)->detachObject(this);
 		}
 	}
 
-	virtual void notifyAttached(Node* node)
+	virtual void notifyAttached(SceneNode* node)
 	{
 		mParent = node;
 	}
 
 	virtual void update(float delta) = 0;
 
-	Node* getParent()
+	SceneNode* getParent()
 	{
 		return mParent;
-	}
-
-	const char* getName() const
-	{
-		return mName;
 	}
 
 	virtual void preRender(DxRenderer* renderer){}
@@ -54,7 +40,6 @@ public:
 
 protected:
 	SceneNode*	mParent;
-	char*	mName;
 };
 
 #endif

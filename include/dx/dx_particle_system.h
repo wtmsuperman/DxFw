@@ -7,6 +7,7 @@
 #include "dx_dxfw.h"
 #include "dx_particle_system_affector.h"
 #include <node/attachable.h>
+#include <lua.hpp>
 
 #include <list>
 
@@ -58,6 +59,8 @@ public:
 	// a reasonable initialize
 	DxParticleEmitter();
 
+	void reset();
+
 	virtual void initParticle(DxParticleAttribute* p);
 
 	virtual void genColor(DxColorValue* color);
@@ -75,6 +78,7 @@ public:
 	~DxParticleSystem();
 
 	bool init(DxFw* fw,size_t maxSize,const char* tex);
+	void reset();
 	void release();
 	bool add(float delta);
 	void affect(float delta);
@@ -144,6 +148,6 @@ private:
 	DWORD	tLight; // temporary saving lighting value
 };
 
-bool loadParticleSystem(DxParticleSystem* o,DxFw* fw,const char* fileName);
+bool loadParticleSystem(DxParticleSystem* o,DxFw* fw,lua_State* L);
 
 #endif

@@ -19,7 +19,7 @@ protected:
 	Quaternion orientation;
 	Node*	parent;
 	
-	typedef std::map<std::string,Node*>		NodeMap;
+	typedef std::map<std::string,Node*>				NodeMap;
 	typedef NodeMap::iterator						NodeIter;
 	typedef NodeMap::const_iterator					ConstNodeIter;
 

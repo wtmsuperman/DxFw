@@ -5,29 +5,49 @@
 #include <dx/dx_particle_system.h>
 #include <map>
 #include <list>
+#include <string>
+#include <lua.hpp>
 
 class DxParticleSystemManager
 {
 public:
+	static DxParticleSystemManager* getSingletonPtr()
+	{
+		static DxParticleSystemManager* self = new DxParticleSystemManager;
+		return self;
+	}
+
+	~DxParticleSystemManager();
+
+public:
+	void				initOnce(DxFw* fw);
 	void				release();
 
 	bool				loadAllParticleSystems(const char* file);
 	bool				loadParticleSystem(const char* file);
 	DxParticleSystem*	createParticleSystem(const char* file);
-	DxParticleAffector*	loadAffector(const char* file);
+	DxParticleAffector*	loadAffector(const char* type,const char* file);
 	// destroy the unalive particle system
 	void				update();
 private:
-	//经常需要复制，没有必要为了节省一次复制而采用指针
-	typedef std::map<std::string,DxParticleSystem>		ParticleSystemResMap;
+	typedef std::map<std::string,lua_State*>			ParticleSystemResMap;
 	typedef std::list<DxParticleSystem*>				ParticleList;
+	typedef std::map<std::string,ParticleList>			ParticleSystemPool;
 	typedef std::map<std::string,DxParticleAffector*>	AffectorsMap;
 	typedef ParticleList::iterator						ParticleListIter;
 	typedef ParticleSystemResMap::iterator				ParticleSystemResMapIter;
+	typedef AffectorsMap::iterator						AffectorsMapIter;
+	typedef ParticleSystemPool::iterator				ParticleSystemPoolIter;
 
-	ParticleSystemResMap							mParticleSystemRes;
-	ParticleList									mActiveParticleSystems;
-	DxFw*											mFw;
+	ParticleSystemResMap								mParticleSystemRes;
+	ParticleSystemPool									mActiveParticleSystems;
+	AffectorsMap										mAffectorsMap;
+	DxFw*												mFw;
+	ParticleSystemPool									mParticlesystemPool;
+
+	DxParticleSystemManager();
+	DxParticleSystemManager(const DxParticleSystemManager& ps);
+	DxParticleSystemManager& operator=(const DxParticleSystemManager& ps);
 };
 
 #endif

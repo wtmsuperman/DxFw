@@ -24,7 +24,7 @@ public:
 
 // Affector creator
 
-typedef DxParticleAffector* (*AffecotrCreator)(const char* file);
+typedef DxParticleAffector* (*AffectorCreator)(const char* file);
 
 // Regist an affector creator by given name
 // You should regist a manual affector,then you can use it in your particle system script file.
@@ -42,12 +42,12 @@ typedef DxParticleAffector* (*AffecotrCreator)(const char* file);
 // you should call registAffectorCreator("myaffector",func) befor you load the scrpit
 // func is your affecotr creator,take the lua script path
 
-void registAffectorCreator(const char* name,AffecotrCreator creator);
+void registAffectorCreator(const char* name,AffectorCreator creator);
 
 
 // Get a affector creator
 
-AffecotrCreator getAffectorCreator(const char* name);
+AffectorCreator getAffectorCreator(const char* name);
 
 /** This class defines a ParticleAffector which applies a linear force to particles in a system.
     @remarks
