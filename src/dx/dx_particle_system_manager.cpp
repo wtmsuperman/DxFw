@@ -104,8 +104,8 @@ bool DxParticleSystemManager::loadParticleSystem(const char* file)
 	mParticleSystemRes[file] = L;
 
 	ParticleList& list = mParticlesystemPool[file];
-	//插入5个缓存
-	for (int i=0; i < 5; ++i)
+	//插入10个缓存
+	for (int i=0; i < 10; ++i)
 	{
 		DxParticleSystem* ps = new DxParticleSystem;
 		::loadParticleSystem(ps,mFw,L);

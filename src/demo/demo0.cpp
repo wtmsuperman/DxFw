@@ -7,18 +7,54 @@
 #include <list>
 #include <dx/boundingBoxRenderer.h>
 
+class Bullet;
 class BulletManager;
+class MyShip;
+class EnemyManager;
 
 DxFw*	gEngine;
 Node*	gCamera;
 
 BulletManager* gBulletMgr;
 IBoundingBoxRenderer* gBoxRenderer;
+MyShip*		gPlayer;
+EnemyManager* gEnemyMgr;
+
+int gPoint;
+float gLiveTime;
+
+enum GAME_STATE
+{
+	GAME_PAUSE,
+	GAME_RUN,
+	GAME_MENU0,
+	GAME_MENU1,
+	GAME_MENU2,
+	GAME_MENU3,
+	GAME_QUIT,
+};
+
+GAME_STATE gGameState;
 
 class Entity : public AttachableObject
 {
 public:
 	Entity(DxModel* model)
+	{
+		this->mXmodel = model;
+
+		//使用的是X file，因此暂时使用directx提供的方式计算boundingbox
+		BYTE* byte;
+		model->mesh->meshData->LockVertexBuffer(0,(void**)&byte);
+		D3DXVECTOR3 max,min;
+		D3DXComputeBoundingBox((D3DXVECTOR3*)byte,model->mesh->meshData->GetNumVertices(),D3DXGetFVFVertexSize(model->mesh->meshData->GetFVF()),&min,&max);
+		model->mesh->meshData->UnlockVertexBuffer();
+		mBoundingbox.max = Vector3(max.x,max.y,max.z);
+		mBoundingbox.min = Vector3(min.x,min.y,min.z);
+		this->mIsDraw = true;
+	}
+
+	void setModel(DxModel* model)
 	{
 		this->mXmodel = model;
 
@@ -60,6 +96,11 @@ public:
 
 	virtual void onRender(DxRenderer* renderer)
 	{
+		if (!mIsDraw)
+		{
+			return;
+		}
+
 		AABB3 box;
 		if (mParent)
 		{
@@ -95,13 +136,7 @@ public:
 	
 	DxModel*	mXmodel;
 	AABB3		mBoundingbox;
-};
-
-class EntityManager
-{
-public:
-	Entity*	creatEntity(const char* file);
-
+	bool		mIsDraw;
 };
 
 class GameEntity
@@ -110,14 +145,19 @@ public:
 	SceneNode*	node;
 	float		speed;
 	bool		isAlive;
-	AABB3		boundingbox;
-	int			type;
+	Entity*		entity;
 public:
+
 	virtual void update(float delta) = 0;
+
+	virtual bool hitByBullet(Bullet* bullet)
+	{
+		return true;
+	}
 
 	virtual bool collisionTest(GameEntity* entity)
 	{
-		if ( entity->boundingbox.intersects(entity->boundingbox) )
+		if ( this->entity->getWorldAABB().intersects(entity->getWorldAABB()) )
 		{
 			this->collisionImpl(entity);
 			entity->collisionImpl(this);
@@ -129,13 +169,9 @@ public:
 	virtual void collisionImpl(GameEntity* entity) = 0;
 
 	// transform to world space
-	virtual AABB3 getWorldAABB3()
+	virtual AABB3 getWorldAABB()
 	{
-		Matrix4x4 m;
-		AABB3 box;
-		m.setupLocalToParent(node->getDerivedPosition(),node->getDerivedOrientation());
-		box.setToTransformedBox(boundingbox,m);
-		return box;
+		return entity->getWorldAABB();
 	}
 };
 
@@ -192,10 +228,10 @@ public:
 	virtual bool collisionTest(GameEntity* entity)
 	{
 		// transform both to world space
-		Vector3 epos = entity->getWorldAABB3().center();
-		if (position.squaredDistance(epos) < attribute->size * attribute->size)
+		if (entity->getWorldAABB().contains(position))
 		{
 			collisionImpl(entity);
+			entity->hitByBullet(this);
 			return true;
 		}
 		return false;
@@ -566,6 +602,18 @@ public:
 		b->direction = Vector3(0.0f,0.0f,1.0);
 		gBulletMgr->initBullet(b,1);
 		gBulletMgr->addBullet(b,1);
+
+		Bullet* b0 = new Bullet;
+		b0->position = getParent()->getDerivedPosition();
+		b0->direction = Vector3(-0.2f,0.0f,0.9f);
+		gBulletMgr->initBullet(b0,1);
+		gBulletMgr->addBullet(b0,1);
+
+		Bullet* b1 = new Bullet;
+		b1->position = getParent()->getDerivedPosition();
+		b1->direction = Vector3(0.2f,0.0f,0.9f);
+		gBulletMgr->initBullet(b1,1);
+		gBulletMgr->addBullet(b1,1);
 	}
 
 	virtual void update(float delta)
@@ -624,13 +672,16 @@ public:
 		:mWeapons(4)
 	{
 		node =(SceneNode*) parent->createChild("myship");
-		node->attachObject(new Entity(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x")));
+		entity = new Entity(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
+		node->attachObject(entity);
 		node->yaw(PI);
 		speed = 100.0f;
+		mHp = 10;
 	}
 
 	~MyShip()
 	{
+		delete entity;
 		size_t size = mWeapons.size();
 		for (size_t i=0; i<size; ++i)
 		{
@@ -641,11 +692,19 @@ public:
 	virtual void update(float delta)
 	{
 		//更新状态
+		logToScreen("HP","%d",mHp);
 	}
 
 	virtual void collisionImpl(GameEntity* entity)
 	{
 		//实现碰撞
+		mHp -= 1;
+	}
+
+	virtual bool hitByBullet(Bullet* bullet)
+	{	
+		mHp -= 1;
+		return true;
 	}
 
 	void addWeapon(Weapon* weapon,int i)
@@ -662,12 +721,445 @@ public:
 		return mWeapons[i];
 	}
 
-private:
+public:
 	//主角武器数量一般不会多，直接使用vector存储即可
-	std::vector<Weapon*> mWeapons;
+	std::vector<Weapon*>	mWeapons;
+	int						mHp;
 };
 
-MyShip*		gPlayer;
+class Enemy : public GameEntity
+{
+public:
+	Enemy(Node* parent,int i)
+	{
+		char buffer[64];
+		sprintf_s(buffer,"enemy%d",i);
+		entity = new Entity(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
+		node =(SceneNode*) parent->createChild(buffer);
+		node->attachObject(entity);
+	}
+
+	~Enemy()
+	{
+		delete entity;
+	}
+
+	virtual bool hitByBullet(Bullet* bullet)
+	{	
+		mHp -= 1;
+		if (mHp <= 0)
+		{
+			isAlive = false;
+			switch (mType)
+			{
+			case 0:
+				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+				gPoint += 100;
+				break;
+			case 1:
+				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+				gPoint += 200;
+				break;
+			case 2:
+				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+				gPoint += 300;
+				break;
+			case 3:
+				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+				gPoint += 300;
+				break;
+			case 4:
+				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+				gPoint += 400;
+				break;
+			case 5:
+				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+				gPoint += 50;
+				break;
+			}
+			
+		}
+		return true;
+	}
+
+	virtual void update(float delta)
+	{
+		//更新状态
+		Vector3& pos = node->getDerivedPosition();
+		if (pos.x < -500.0f || pos.x > 500.0f || pos.z < -400.0f || pos.z > 400.0f)
+		{
+			isAlive = false;
+		}
+
+		if (mType == 1)
+		{
+			const Vector3& p = gPlayer->node->getDerivedPosition();
+			const Vector3& e = this->node->getDerivedPosition();
+			if (e.z > p.z )
+			{
+				float tanTheta = (p.x - e.x) / (p.z - e.z);
+				float theta = atanf(tanTheta);
+				sinCos(theta,&mDir.x,&mDir.z);
+			}
+			else
+			{
+				mDir = Vector3::UNIT_Z;
+			}
+		}
+
+		if (mType == 3)
+		{
+			mTimer0 += delta;
+			if (mTimer0 > 0.5f)
+			{
+				mDir = Vector3::UNIT_Z;
+			}
+		}
+
+		if (mType == 4)
+		{
+
+		}
+
+		if (mType == 5)
+		{
+			long r = randl(0,2);
+			float f = randf(1.0f,5.0f);
+			if (r == 0)
+			{
+				node->yaw(delta * f);
+			}else if (r == 1)
+			{
+				node->roll(delta * f);
+			}else if (r == 2)
+			{
+				node->pitch(delta * f);
+			}
+		}
+
+		Vector3 walk = mDir * (speed * delta);
+		node->translate(walk,Node::TS_PARENT);
+	}
+
+	virtual void collisionImpl(GameEntity* entity)
+	{
+		//实现碰撞
+		isAlive = false;
+		node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+	}
+
+	void enableDraw(bool enable)
+	{
+		this->entity->mIsDraw = enable;
+	}
+
+	void setType(int type)
+	{
+		mType = type;
+		if (type == 0) // 随机敌人
+		{
+			speed = -130.0f;
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
+			mHp = 1;
+		}
+		if (type == 1) //追踪导弹
+		{
+			speed = -90.0f;
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
+			mHp = 1;
+		}
+		if (type == 2) //交叉6个敌人
+		{
+			speed = -140.0f;
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
+			mHp = 1;
+		}
+		if (type == 3) //折线敌人
+		{
+			speed = -200.0f;
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
+			mHp = 1;
+		}
+		if (type == 4) //发1发子弹的敌人
+		{
+			speed = -100.0f;
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
+		}
+		if (type == 5) //陨石
+		{
+			speed = -50.0f;
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
+			mHp = 4;
+		}
+	}
+
+	void reset(int type)
+	{
+		this->node->detachAll();
+		this->node->attachObject(entity);
+		this->node->setOrientation(Quaternion::IDENTITY);
+		mTimer0 = 0.0f;
+		mTimer1 = 0.0f;
+		setType(type);
+	}
+public:
+	Vector3		mDir;
+	int			mType;
+	float		mTimer0;
+	float		mTimer1;
+	int			mHp;
+};
+
+class EnemyManager
+{
+public:
+	EnemyManager(Node* parent)
+	{
+		for (int i=0; i<40; ++i)
+		{
+			Enemy* e = new Enemy(parent,i);
+			mFrees.push_back(e);
+			mPool.push_back(e);
+			e->enableDraw(false);
+		}
+	}
+
+	~EnemyManager()
+	{
+		for (int i=0; i<40; ++i)
+		{
+			delete mPool[i];
+		}
+	}
+
+	void addTwo()
+	{
+		if (mFrees.size() < 6)
+		{
+			return;
+		}
+
+		for (int i=0; i<3; ++i)
+		{
+			if (mFrees.empty())
+			{
+				return;
+			}
+
+			Enemy* enemy = mFrees.front();
+			mActives.push_back(mFrees.front());
+			mFrees.pop_front();
+
+			float x = 150.0f + i * 15.0f;
+			enemy->node->setPosition(x,0.0f,100.0f);
+			enemy->isAlive= true;
+			enemy->mDir.x = 0.5f;
+			enemy->mDir.z = 0.3f;
+
+			enemy->reset(2);
+			enemy->enableDraw(true);
+		}
+
+		for (int i=0; i<3; ++i)
+		{
+			if (mFrees.empty())
+			{
+				return;
+			}
+
+			Enemy* enemy = mFrees.front();
+			mActives.push_back(mFrees.front());
+			mFrees.pop_front();
+
+			float x = -(150.0f + i * 15.0f);
+			enemy->node->setPosition(x,0.0f,100.0f);
+			enemy->isAlive= true;
+			enemy->mDir.x = -0.5f;
+			enemy->mDir.z = 0.4f;
+
+			enemy->reset(2);
+			enemy->enableDraw(true);
+		}
+	}
+
+	void addZero()
+	{
+		if (mFrees.empty())
+		{
+			return;
+		}
+
+		Enemy* enemy = mFrees.front();
+		mActives.push_back(mFrees.front());
+		mFrees.pop_front();
+
+		float x = randf(-90.0f,90.0f);
+		enemy->node->setPosition(x,0.0f,200.0f);
+		enemy->isAlive= true;
+		const Vector3& p = gPlayer->node->getDerivedPosition();
+		const Vector3& e = enemy->node->getDerivedPosition();
+		float tanTheta = (p.x - e.x) / (p.z - e.z);
+		float theta = atanf(tanTheta);
+		sinCos(theta,&enemy->mDir.x,&enemy->mDir.z);
+
+		enemy->reset(0);
+		enemy->enableDraw(true);
+	}
+
+	void addOne()
+	{
+		int num = (int) randl(1,3);
+		if (mFrees.size() < num)
+		{
+			return;
+		}
+		for (int i=0; i<num; ++i)
+		{
+			Enemy* enemy = mFrees.front();
+			mActives.push_back(mFrees.front());
+			mFrees.pop_front();
+
+			float x = randf(-100.0f,100.0f);
+			float z = randf(140.0f,200.0f);
+			enemy->node->setPosition(x,0.0f,z);
+			enemy->isAlive= true;
+			enemy->reset(1);
+			enemy->enableDraw(true);
+		}
+	}
+
+	void addThree()
+	{
+		int num = 4;
+		if (mFrees.size() < num)
+		{
+			return;
+		}
+		for (int i=0; i<2; ++i)
+		{
+			Enemy* enemy = mFrees.front();
+			mActives.push_back(mFrees.front());
+			mFrees.pop_front();
+	
+			float x = -50.0f - i*30.0f;
+			enemy->node->setPosition(x,0.0f,100.0f);
+			enemy->isAlive= true;
+			enemy->reset(3);
+			enemy->enableDraw(true);
+			enemy->mDir = -Vector3::UNIT_X;
+		}
+		for (int i=0; i<2; ++i)
+		{
+			Enemy* enemy = mFrees.front();
+			mActives.push_back(mFrees.front());
+			mFrees.pop_front();
+	
+			float x = 50.0f + i*30.0f;
+			enemy->node->setPosition(x,0.0f,100.0f);
+			enemy->isAlive= true;
+			enemy->reset(3);
+			enemy->enableDraw(true);
+			enemy->mDir = Vector3::UNIT_X;
+		}
+	}
+
+	void addFive()
+	{
+		int num = (int) randl(3,6);
+		if (mFrees.size() < num)
+		{
+			return;
+		}
+		for (int i=0; i<num; ++i)
+		{
+			Enemy* enemy = mFrees.front();
+			mActives.push_back(mFrees.front());
+			mFrees.pop_front();
+	
+			float x = randf(-40.0f,40.0f);
+			enemy->node->setPosition(x,0.0f,200.0f);
+			enemy->isAlive= true;
+			enemy->reset(5);
+			enemy->enableDraw(true);
+			enemy->mDir = Vector3::UNIT_Z;
+		}
+	}
+
+	void update(float delta)
+	{
+		logToScreen("current enemy","%d",mActives.size());
+		static float counter0 = 0.0f;
+		static float counter1 = 0.0f;
+		static float counter2 = 0.0f;
+		static float counter3 = 0.0f;
+		static float counter4 = 0.0f;
+		static float counter5 = 0.0f;
+
+		if (counter0 > 1.0f)
+		{
+			addZero();
+			counter0 = 0.0f;
+		}
+		if (counter1 > 4.0f)
+		{
+			addOne();
+			counter1 = 0.0f;
+		}
+		if (counter2 > 15.0f)
+		{
+			addTwo();
+			counter2 = 0.0f;
+		}
+		if (counter3 > 8.0f)
+		{
+			addThree();
+			counter3 = 0.0f;
+		}
+		if (counter4 > 1.0f)
+		{
+			//addZero();
+			counter4 = 0.0f;
+		}
+		if (counter5 > 3.0f)
+		{
+			addFive();
+			counter5 = 0.0f;
+		}
+
+		std::list<Enemy*>::iterator end = mActives.end();
+		std::list<Enemy*>::iterator iter = mActives.begin();
+		for (;iter != end;)
+		{
+			Enemy* e = *iter;
+			
+			if (e->isAlive)
+			{
+				e->update(delta);
+				gBulletMgr->collisionTest(e,1);
+				gPlayer->collisionTest(e);
+				++iter;
+			}
+			else
+			{
+				mFrees.push_back(e);
+				iter = mActives.erase(iter);
+				e->enableDraw(false);
+			}
+		}
+
+		counter0 += delta;
+		counter1 += delta;
+		counter2 += delta;
+		counter3 += delta;
+		counter4 += delta;
+		counter5 += delta;
+	}
+
+private:
+	std::vector<Enemy*>	mPool;
+	std::list<Enemy*>	mActives;
+	std::list<Enemy*>	mFrees;
+};
 
 void initEngine(WinInfo& info)
 {
@@ -675,7 +1167,7 @@ void initEngine(WinInfo& info)
 	srand((unsigned int)time(0));
 
 	DxParam param = {info.isFullScreen,info.width,info.height,info.hwnd};
-	gEngine->initAll(param,info.hwnd,info.hist,true);
+	gEngine->initAll(param,info.hwnd,info.hist,false);
 
 	gEngine->getRenderer()->setAsPerspectiveProjection(PI_OVER_2,(float)info.width / (float) info.height,1.0f,1000.0f);
 }
@@ -700,10 +1192,33 @@ void initEnvironment()
 	//gEngine->getRenderer()->enableLight(false);
 }
 
+void renderScore()
+{
+	GUILayout* layout = GUISystem::getSingletonPtr()->currentLayout();
+	GUILabel* l0 = (GUILabel*)layout->getControlById(0);
+	GUILabel* l1 = (GUILabel*)layout->getControlById(1);
+	GUILabel* l2 = (GUILabel*)layout->getControlById(2);
+	l0->printf("Score %d",gPoint);
+	l1->printf("Alive Time %f",gLiveTime);
+	char buffer[20];
+	memset(buffer,0,20);
+	for (int i=0; i<gPlayer->mHp; ++i)
+	{
+		strcat_s(buffer,"*");
+	}
+	l2->printf("%s",buffer);
+}
+
+void resetGame()
+{
+	gPoint = 0;
+	gLiveTime = 0.0f;
+}
+
 void initCamera()
 {
 	gCamera = new Node;
-	gCamera->setPosition(0.0f,50.0f,-40.0f);
+	gCamera->setPosition(0.0f,50.0f,-30.0f);
 	gCamera->lookAt(0.0f,0.0f,0.0f);
 }
 
@@ -735,6 +1250,19 @@ void releaseAll()
 void processInput(float delta)
 {
 	IInputSystem* input = gEngine->getInputSystem();
+	if (gGameState == GAME_PAUSE)
+	{
+		if (input->keyDown(DIK_P))
+		{
+			gGameState = GAME_RUN;
+		}
+		return;
+	}
+
+	if (input->keyDown(DIK_P))
+	{
+		gGameState = GAME_PAUSE;
+	}
 
 	if (input->keyDown(DIK_F5))
 	{
@@ -743,6 +1271,8 @@ void processInput(float delta)
 	}
 
 	Vector3 walk = Vector3::ZERO;
+	const Vector3& cameraPos = gCamera->getPosition();
+
 	if (input->keyDown(DIK_W))
 	{
 		walk.z += gPlayer->speed;
@@ -764,12 +1294,126 @@ void processInput(float delta)
 		gPlayer->getWeapon(0)->fire();
 	}
 
+	
+
+	if (input->keyDown(DIK_UP) && cameraPos.y < 55.0f)
+	{
+		gCamera->translate(0.0f,10.0f * delta,0.0f,Node::TS_LOCAL);
+	}
+
+	if (input->keyDown(DIK_DOWN) && cameraPos.y > 45.0f)
+	{
+		gCamera->translate(0.0f,-10.0f * delta,0.0f,Node::TS_LOCAL);
+	}
+
+	if (input->keyDown(DIK_LEFT))
+	{
+		gCamera->yaw(degreeToRadians(-10 * delta));
+	}
+
+	if (input->keyDown(DIK_RIGHT))
+	{
+		gCamera->yaw(degreeToRadians(10 * delta));
+	}
+
+	logToScreen("ship","%f,%f",gPlayer->node->getDerivedPosition().x,gPlayer->node->getDerivedPosition().z);
+	logToScreen("mouse","%f,%f",(float)input->accX(),(float)input->accY());
+	//gCamera->rotate(Vector3::UNIT_Y,(float)input->accY(),Node::TS_WORLD);
+	//gCamera->rotate(Vector3::UNIT_X,(float)input->accX(),Node::TS_WORLD);
+
 	if (input->keyUp(DIK_K))
 	{
 		gPlayer->node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
 	}
 	walk *= delta;
-	gPlayer->node->translate(walk,Node::TS_LOCAL);
+	Vector3 moveTo = gPlayer->node->getDerivedPosition() + walk;
+	
+	if (moveTo.x < -60.0f || moveTo.x > 60.0f || moveTo.z < -30.0f || moveTo.z > 200.0f)
+	{
+		return;
+	}
+	if (input->keyDown(DIK_A))
+	{
+		gCamera->yaw(degreeToRadians(-5 * delta));
+	}
+	if (input->keyDown(DIK_D))
+	{
+		gCamera->yaw(degreeToRadians(5 * delta));
+	}
+	gPlayer->node->translate(walk,Node::TS_PARENT);
+}
+
+void startGameCallback(int id)
+{
+	gGameState = GAME_RUN;
+	GUISystem::getSingletonPtr()->changeCurrentLayout(3);
+}
+
+void backGameCallback(int id)
+{
+	gGameState = GAME_MENU0;
+	GUISystem::getSingletonPtr()->changeCurrentLayout(0);
+}
+
+void quitGameCallback(int id)
+{
+	gGameState = GAME_QUIT;
+}
+
+void aboutGameCallback(int id)
+{
+	gGameState = GAME_MENU1;
+	GUISystem* guisys = GUISystem::getSingletonPtr();
+	guisys->changeCurrentLayout(1);
+}
+
+void resetGameCallback(int id)
+{
+	resetGame();
+	gGameState = GAME_RUN;
+	GUISystem::getSingletonPtr()->changeCurrentLayout(3);
+}
+
+void initGUI()
+{
+	GUISystem* guisys = GUISystem::getSingletonPtr();
+	guisys->initOnce(*gEngine);
+	loggingInit(guisys);
+
+	guisys->load("media/gui/dx.xml");
+	guisys->changeCurrentLayout(0);
+
+	GUILayout* layout0 = guisys->getLayout(0);
+	((GUIButton*)layout0->getControlById(4))->setClickListener(quitGameCallback);
+	((GUIButton*)layout0->getControlById(2))->setClickListener(startGameCallback);
+	((GUIButton*)layout0->getControlById(3))->setClickListener(aboutGameCallback);
+
+	GUILayout* layout1 = guisys->getLayout(1);
+	((GUIButton*)layout1->getControlById(0))->setClickListener(backGameCallback);
+}
+
+void gameRun(float delta)
+{
+	processInput(delta);
+
+	switch (gGameState)
+	{
+	case GAME_RUN:
+		gBulletMgr->update(delta);
+		gEnemyMgr->update(delta);
+		gPlayer->update(delta);
+		renderScore();
+		gLiveTime += delta;
+		break;
+	case GAME_MENU0:
+		break;
+	case GAME_MENU1:
+		break;
+	case GAME_MENU2:
+		break;
+	case GAME_MENU3:
+		break;
+	}
 }
 
 int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
@@ -781,6 +1425,9 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	{
 		return -1;
 	}
+
+	//ShowCursor(true);
+
 	initEngine(info);
 	initEnvironment();
 	initCamera();
@@ -791,27 +1438,28 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 	DxRenderer* renderer = gEngine->getRenderer();
 	IInputSystem* inputSys = gEngine->getInputSystem();
 	GUISystem* guisys = GUISystem::getSingletonPtr();
-	guisys->initOnce(*gEngine);
-
-	loggingInit(guisys);
+	initGUI();
 	
 	SceneNode* root = new SceneNode("root");
-	root->yaw(PI);
 	gPlayer = new MyShip(root);
 
 	SceneNode* fire = (SceneNode*)gPlayer->node->createChild("gas");
 	fire->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/ship_gas.lua"));
-	fire->setPosition(0.0f,0.0f,-8.0);
+	fire->setPosition(0.0f,0.0f,8.0);
 
 	gBulletMgr = new BulletManager;
 	gBulletMgr->init(gEngine);
 	gBulletMgr->load("media/bullet/bullets0.lua");
 	root->attachObject(gBulletMgr);
 
-	gPlayer->addWeapon(new Weapon(0.4f,2,0.05f),0);
+	gEnemyMgr = new EnemyManager(root);
+
+	gPlayer->addWeapon(new Weapon(0.5f,1,0.1f),0);
+
+	gGameState = GAME_MENU0;
 
 	MSG msg;
-	while (true)
+	while (gGameState != GAME_QUIT)
 	{
 		renderer->clear(true,true,true,0xff000000);
 		applyCamera();
@@ -821,11 +1469,16 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		guisys->render();
 		renderer->endScene();
 
-		float delta = getTimeSinceLastFrame();
-		root->update(delta);
-		processInput(delta);
 		inputSys->capture();
-		gEngine->getParticleSystemManager()->update();
+		float delta = getTimeSinceLastFrame();
+		gameRun(delta);
+		if (gGameState == GAME_RUN)
+		{
+			root->update(delta);
+			gEngine->getParticleSystemManager()->update();
+		}
+		Point p = inputSys->getMouseClientPosition();
+		guisys->processGUI(p.x,p.y,inputSys->mouseButtonDown(0));
 		renderer->present();
 		messagePump(&msg);
 		if (msg.message == WM_QUIT)

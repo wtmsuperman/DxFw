@@ -46,6 +46,8 @@ public:
 
 	void detachObject(AttachableObject* obj);
 
+	void detachAll();
+
 	virtual void update(float delta);
 
 protected:

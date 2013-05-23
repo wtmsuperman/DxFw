@@ -11,11 +11,11 @@ typedef std::map<std::string,std::string>::iterator LogginIter;
 
 void loggingInit(GUISystem* guisys)
 {
-	GUILayout* layout = guisys->createLayout(0);
-	DxFont* font = guisys->createFont("",15,false,15,0);
-	GUILabel* label = layout->createLabel(0,0,800,600,0,0);
+	GUILayout* layout = guisys->createLayout(1024);
+	DxFont* font = guisys->createFont("",15,false,15,1024);
+	GUILabel* label = layout->createLabel(0,0,800,600,0,1024);
 	label->setColor(0xffff0000);
-	guisys->changeCurrentLayout(0);
+	guisys->changeCurrentLayout(1024);
 	g_label = label;
 }
 

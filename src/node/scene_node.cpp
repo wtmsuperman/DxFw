@@ -18,9 +18,7 @@ void SceneNode::onRender(DxRenderer* renderer)
 	NodeIter node_end = mNodes.end();
 	for (NodeIter iter = mNodes.begin(); iter != node_end; ++iter)
 	{
-		((SceneNode*)(iter->second))->preRender(renderer);
 		((SceneNode*)(iter->second))->onRender(renderer);
-		((SceneNode*)(iter->second))->postRender(renderer);
 	}
 }
 
@@ -60,4 +58,15 @@ void SceneNode::detachObject(AttachableObject* obj)
 			return;
 		}
 	}
+}
+
+void SceneNode::detachAll()
+{
+	AttachedObjectListIter end = mAttachedObjects.end();
+	for (AttachedObjectListIter iter=mAttachedObjects.begin(); iter!=end; ++iter)
+	{
+		(*iter)->notifyAttached(0);
+	}
+
+	mAttachedObjects.clear();
 }

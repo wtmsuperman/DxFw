@@ -150,6 +150,7 @@ public:
 			{
 				pos += v;
 			}
+			break;
 		}
 	}
 
@@ -183,13 +184,23 @@ public:
 	{
 		if (parent)
 		{
-			Matrix3x3 r(getDerivedOrientation());
+			Matrix3x3 r(parent->getDerivedOrientation());
 			return parent->getDerivedPosition() + (pos * r);
 		}
 		else
 		{
 			return pos;
 		}
+	}
+
+	Node* getParent() const
+	{
+		return parent;
+	}
+
+	bool haveParent()
+	{
+		return parent != 0;
 	}
 
 	void generateLocalToParentMatrix(Matrix4x4* out)

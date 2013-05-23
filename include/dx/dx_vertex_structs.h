@@ -41,6 +41,16 @@ typedef struct stTexVertex
 }
 TexVertex;
 
+typedef struct stNormalVertext
+{
+	float x, y, z;
+	float nx, ny, nz;
+	float u, v;
+
+	static const DWORD FVF = D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX1;
+}
+NormalVertex;
+
 typedef struct stParticleVertex
 {
 	float			x,y,z;
