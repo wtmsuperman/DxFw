@@ -6,6 +6,7 @@
 #include <map>
 #include <list>
 #include <dx/boundingBoxRenderer.h>
+#include <other\skybox.h>
 
 class Bullet;
 class BulletManager;
@@ -22,6 +23,10 @@ EnemyManager* gEnemyMgr;
 
 int gPoint;
 float gLiveTime;
+
+int gBgMusic;
+
+bool gRenderBox = false;
 
 enum GAME_STATE
 {
@@ -101,17 +106,14 @@ public:
 			return;
 		}
 
-		AABB3 box;
 		if (mParent)
 		{
 			Matrix4x4 m;
 			mParent->generateLocalToWorldMatrix(&m);
-			box.setToTransformedBox(mBoundingbox,m);
 			renderer->setWorldTransform(m);
 		}
 		else
 		{
-			box.setToTransformedBox(mBoundingbox,Matrix4x4::IDENTITY);
 			renderer->setWorldTransform(Matrix4x4::IDENTITY);
 		}
 
@@ -124,7 +126,22 @@ public:
 			mXmodel->mesh->meshData->DrawSubset(i);
 		}
 
-		gBoxRenderer->draw(box);
+		if (gRenderBox)
+		{
+			AABB3 box;
+			if (mParent)
+			{
+				Matrix4x4 m;
+				mParent->generateLocalToWorldMatrix(&m);
+				box.setToTransformedBox(mBoundingbox,m);
+			}
+			else
+			{
+				box.setToTransformedBox(mBoundingbox,Matrix4x4::IDENTITY);
+			}
+
+			gBoxRenderer->draw(box);
+		}
 	}
 
 	virtual void postRender(DxRenderer* renderer)
@@ -614,6 +631,8 @@ public:
 		b1->direction = Vector3(0.2f,0.0f,0.9f);
 		gBulletMgr->initBullet(b1,1);
 		gBulletMgr->addBullet(b1,1);
+
+		DxSoundSystem::getSingletonPtr()->playSound(5,1,getParent()->getDerivedPosition());
 	}
 
 	virtual void update(float delta)
@@ -689,10 +708,35 @@ public:
 		}
 	}
 
+	void reset()
+	{
+		node->setPosition(0.0f,0.0f,0.0f);
+		node->attachObject(entity);
+		speed = 100.0f;
+		mHp = 10;
+	}
+
 	virtual void update(float delta)
 	{
 		//更新状态
-		logToScreen("HP","%d",mHp);
+		//logToScreen("HP","%d",mHp);
+		if (mHp <= 0)
+		{
+			die();
+		}
+	}
+
+	void die()
+	{
+		GUISystem::getSingletonPtr()->changeCurrentLayout(2);
+		GUILayout* layout = GUISystem::getSingletonPtr()->currentLayout();
+		GUILabel* l0 = (GUILabel*)layout->getControlById(3);
+
+		char buffer[512];
+		sprintf_s(buffer,"Final Scroe %d Alive Time %f",gPoint,gLiveTime);
+		l0->setText(buffer);
+		gGameState = GAME_MENU2;
+		node->detachAll();
 	}
 
 	virtual void collisionImpl(GameEntity* entity)
@@ -749,35 +793,7 @@ public:
 		mHp -= 1;
 		if (mHp <= 0)
 		{
-			isAlive = false;
-			switch (mType)
-			{
-			case 0:
-				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
-				gPoint += 100;
-				break;
-			case 1:
-				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
-				gPoint += 200;
-				break;
-			case 2:
-				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
-				gPoint += 300;
-				break;
-			case 3:
-				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
-				gPoint += 300;
-				break;
-			case 4:
-				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
-				gPoint += 400;
-				break;
-			case 5:
-				node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
-				gPoint += 50;
-				break;
-			}
-			
+			die();
 		}
 		return true;
 	}
@@ -789,6 +805,7 @@ public:
 		if (pos.x < -500.0f || pos.x > 500.0f || pos.z < -400.0f || pos.z > 400.0f)
 		{
 			isAlive = false;
+			node->detachAll();
 		}
 
 		if (mType == 1)
@@ -800,10 +817,13 @@ public:
 				float tanTheta = (p.x - e.x) / (p.z - e.z);
 				float theta = atanf(tanTheta);
 				sinCos(theta,&mDir.x,&mDir.z);
+				node->setDirection(Vector3(mDir),Node::TS_WORLD);
+				//mDir = Vector3::UNIT_Z;
 			}
 			else
-			{
+			{	
 				mDir = Vector3::UNIT_Z;
+				node->setDirection(Vector3::UNIT_Z,Node::TS_WORLD);
 			}
 		}
 
@@ -824,7 +844,7 @@ public:
 		if (mType == 5)
 		{
 			long r = randl(0,2);
-			float f = randf(1.0f,5.0f);
+			float f = randf(1.0f,3.0f);
 			if (r == 0)
 			{
 				node->yaw(delta * f);
@@ -838,14 +858,54 @@ public:
 		}
 
 		Vector3 walk = mDir * (speed * delta);
-		node->translate(walk,Node::TS_PARENT);
+		node->translate(walk);
 	}
 
 	virtual void collisionImpl(GameEntity* entity)
 	{
 		//实现碰撞
+		die();
+	}
+
+	void die()
+	{
 		isAlive = false;
-		node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+		DxSoundSystem* soundSys = DxSoundSystem::getSingletonPtr();
+		node->detachAll();
+		int id = (int)randl(2,4);
+		switch (mType)
+		{
+		case 0:
+			node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+			soundSys->playSound(id,1,node->getDerivedPosition());
+			gPoint += 100;
+			break;
+		case 1:
+			node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire2.lua"));
+			gPoint += 200;
+			soundSys->playSound(id,1,node->getDerivedPosition());
+			break;
+		case 2:
+			node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire2.lua"));
+			gPoint += 300;
+			soundSys->playSound(id,1,node->getDerivedPosition());
+			break;
+		case 3:
+			node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+			gPoint += 300;
+			soundSys->playSound(id,1,node->getDerivedPosition());
+			break;
+		case 4:
+			node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+			gPoint += 400;
+			soundSys->playSound(id,1,node->getDerivedPosition());
+			break;
+		case 5:
+			node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+			gPoint += 50;
+			soundSys->playSound(id,1,node->getDerivedPosition());
+			break;
+		}
 	}
 
 	void enableDraw(bool enable)
@@ -859,25 +919,26 @@ public:
 		if (type == 0) // 随机敌人
 		{
 			speed = -130.0f;
-			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
-			mHp = 1;
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("media/model/e2.x"));
+			mHp = 2;
 		}
 		if (type == 1) //追踪导弹
 		{
-			speed = -90.0f;
-			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
-			mHp = 1;
+			speed = -60.0f;
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("media/model/e2.x"));
+			node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/m_gas.lua"));
+			mHp = 5;
 		}
 		if (type == 2) //交叉6个敌人
 		{
 			speed = -140.0f;
-			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
-			mHp = 1;
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("media/model/e4.x"));
+			mHp = 2;
 		}
 		if (type == 3) //折线敌人
 		{
 			speed = -200.0f;
-			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("media/model/e2.x"));
 			mHp = 1;
 		}
 		if (type == 4) //发1发子弹的敌人
@@ -888,8 +949,8 @@ public:
 		if (type == 5) //陨石
 		{
 			speed = -50.0f;
-			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("ship.x"));
-			mHp = 4;
+			entity->setModel(gEngine->getResourceManager()->getResourceGroup("hero")->getModel("media/model/e1.x"));
+			mHp = 7;
 		}
 	}
 
@@ -993,14 +1054,11 @@ public:
 		mActives.push_back(mFrees.front());
 		mFrees.pop_front();
 
-		float x = randf(-90.0f,90.0f);
+		float dx = randf(-5.0f,5.0f);
+		float x = gPlayer->node->getDerivedPosition().x + dx;
 		enemy->node->setPosition(x,0.0f,200.0f);
 		enemy->isAlive= true;
-		const Vector3& p = gPlayer->node->getDerivedPosition();
-		const Vector3& e = enemy->node->getDerivedPosition();
-		float tanTheta = (p.x - e.x) / (p.z - e.z);
-		float theta = atanf(tanTheta);
-		sinCos(theta,&enemy->mDir.x,&enemy->mDir.z);
+		enemy->mDir = Vector3::UNIT_Z;
 
 		enemy->reset(0);
 		enemy->enableDraw(true);
@@ -1095,22 +1153,22 @@ public:
 		static float counter4 = 0.0f;
 		static float counter5 = 0.0f;
 
-		if (counter0 > 1.0f)
+		if (counter0 > 0.5f)
 		{
 			addZero();
 			counter0 = 0.0f;
 		}
-		if (counter1 > 4.0f)
+		if (counter1 > 2.0f)
 		{
 			addOne();
 			counter1 = 0.0f;
 		}
-		if (counter2 > 15.0f)
+		if (counter2 > 13.0f)
 		{
 			addTwo();
 			counter2 = 0.0f;
 		}
-		if (counter3 > 8.0f)
+		if (counter3 > 6.0f)
 		{
 			addThree();
 			counter3 = 0.0f;
@@ -1155,6 +1213,18 @@ public:
 		counter5 += delta;
 	}
 
+	void reset()
+	{
+		mActives.clear();
+		mFrees.clear();
+		for (int i=0; i<40; ++i)
+		{
+			Enemy* e = mPool.at(i);
+			e->reset(0);
+			e->enableDraw(false);
+			mFrees.push_back(e);
+		}
+	}
 private:
 	std::vector<Enemy*>	mPool;
 	std::list<Enemy*>	mActives;
@@ -1169,7 +1239,10 @@ void initEngine(WinInfo& info)
 	DxParam param = {info.isFullScreen,info.width,info.height,info.hwnd};
 	gEngine->initAll(param,info.hwnd,info.hist,false);
 
-	gEngine->getRenderer()->setAsPerspectiveProjection(PI_OVER_2,(float)info.width / (float) info.height,1.0f,1000.0f);
+	gEngine->getRenderer()->setAsPerspectiveProjection(PI_OVER_2,(float)info.width / (float) info.height,1.0f,2000.0f);
+
+	DxSoundSystem::getSingletonPtr()->init();
+	DxSoundSystem::getSingletonPtr()->setDistanceFactor(1.0f);
 }
 
 void initEnvironment()
@@ -1204,13 +1277,17 @@ void renderScore()
 	memset(buffer,0,20);
 	for (int i=0; i<gPlayer->mHp; ++i)
 	{
-		strcat_s(buffer,"*");
+		strcat_s(buffer,"<");
 	}
 	l2->printf("%s",buffer);
 }
 
 void resetGame()
 {
+	gCamera->setPosition(0.0f,50.0f,-30.0f);
+	gCamera->lookAt(0.0f,0.0f,0.0f);
+	gPlayer->reset();
+	gEnemyMgr->reset();
 	gPoint = 0;
 	gLiveTime = 0.0f;
 }
@@ -1233,8 +1310,28 @@ void loadResource()
 {
 	DxResourceGroup* shipGroup = gEngine->getResourceManager()->createResourceGroup("hero");
 	shipGroup->loadXModel("ship.x");
+	shipGroup->loadXModel("media/model/e1.x");
+	shipGroup->loadXModel("media/model/e2.x");
+	shipGroup->loadXModel("media/model/e3.x");
+	shipGroup->loadXModel("media/model/e4.x");
 	gEngine->getParticleSystemManager()->loadParticleSystem("media/particle/ship_gas.lua");
+	gEngine->getParticleSystemManager()->loadParticleSystem("media/particle/m_gas.lua");
 	gEngine->getParticleSystemManager()->loadParticleSystem("media/particle/fire.lua");
+	gEngine->getParticleSystemManager()->loadParticleSystem("media/particle/fire2.lua");
+	DxSoundSystem* soundSys = DxSoundSystem::getSingletonPtr();
+	soundSys->createSound("media/sound/bg1.mp3",SOUND_TYPE_2D,true,0); //背景1
+	soundSys->createSound("media/sound/bg2.mp3",SOUND_TYPE_2D,true,1); //背景2
+	
+	soundSys->createSound("media/sound/1.mp3",SOUND_TYPE_3D,false,2); //爆炸1
+	soundSys->createSound("media/sound/2.mp3",SOUND_TYPE_3D,false,3); //爆炸2
+	soundSys->createSound("media/sound/3.mp3",SOUND_TYPE_3D,false,4); //爆炸2
+	soundSys->createSound("media/sound/gun0.mp3",SOUND_TYPE_3D,false,5); //子弹
+	//soundSys->createSound("",SOUND_TYPE_3D,false,6); //移动
+	/*
+	soundSys->createSound("",SOUND_TYPE_3D,false,6); //敌人移动1
+	soundSys->createSound("",SOUND_TYPE_3D,false,7); //敌人移动2
+	soundSys->createSound("",SOUND_TYPE_3D,false,8); //敌人移动3
+	*/
 }
 
 void releaseAll()
@@ -1245,6 +1342,7 @@ void releaseAll()
 	delete gBoxRenderer;
 	gEngine->release();
 	delete gEngine;
+	DxSoundSystem::getSingletonPtr()->release();
 }
 
 void processInput(float delta)
@@ -1252,14 +1350,14 @@ void processInput(float delta)
 	IInputSystem* input = gEngine->getInputSystem();
 	if (gGameState == GAME_PAUSE)
 	{
-		if (input->keyDown(DIK_P))
+		if (input->keyUp(DIK_P))
 		{
 			gGameState = GAME_RUN;
 		}
 		return;
 	}
 
-	if (input->keyDown(DIK_P))
+	if (input->keyUp(DIK_P))
 	{
 		gGameState = GAME_PAUSE;
 	}
@@ -1323,7 +1421,7 @@ void processInput(float delta)
 
 	if (input->keyUp(DIK_K))
 	{
-		gPlayer->node->attachObject(gEngine->getParticleSystemManager()->createParticleSystem("media/particle/fire.lua"));
+		gRenderBox = !gRenderBox;
 	}
 	walk *= delta;
 	Vector3 moveTo = gPlayer->node->getDerivedPosition() + walk;
@@ -1347,6 +1445,8 @@ void startGameCallback(int id)
 {
 	gGameState = GAME_RUN;
 	GUISystem::getSingletonPtr()->changeCurrentLayout(3);
+	DxSoundSystem::getSingletonPtr()->stop(gBgMusic);
+	gBgMusic = DxSoundSystem::getSingletonPtr()->playSound(1,0,0);
 }
 
 void backGameCallback(int id)
@@ -1372,6 +1472,8 @@ void resetGameCallback(int id)
 	resetGame();
 	gGameState = GAME_RUN;
 	GUISystem::getSingletonPtr()->changeCurrentLayout(3);
+	DxSoundSystem::getSingletonPtr()->stop(gBgMusic);
+	gBgMusic = DxSoundSystem::getSingletonPtr()->playSound(1,0,0);
 }
 
 void initGUI()
@@ -1390,6 +1492,10 @@ void initGUI()
 
 	GUILayout* layout1 = guisys->getLayout(1);
 	((GUIButton*)layout1->getControlById(0))->setClickListener(backGameCallback);
+
+	GUILayout* layout2 = guisys->getLayout(2);
+	((GUIButton*)layout2->getControlById(0))->setClickListener(resetGameCallback);
+	((GUIButton*)layout2->getControlById(2))->setClickListener(quitGameCallback);
 }
 
 void gameRun(float delta)
@@ -1399,10 +1505,10 @@ void gameRun(float delta)
 	switch (gGameState)
 	{
 	case GAME_RUN:
+		renderScore();
 		gBulletMgr->update(delta);
 		gEnemyMgr->update(delta);
 		gPlayer->update(delta);
-		renderScore();
 		gLiveTime += delta;
 		break;
 	case GAME_MENU0:
@@ -1454,17 +1560,29 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 
 	gEnemyMgr = new EnemyManager(root);
 
-	gPlayer->addWeapon(new Weapon(0.5f,1,0.1f),0);
+	gPlayer->addWeapon(new Weapon(0.3f,1,0.1f),0);
 
 	gGameState = GAME_MENU0;
 
+	DxSoundSystem* soundSys = DxSoundSystem::getSingletonPtr();
+	soundSys->setListener(gCamera);
+	gBgMusic = soundSys->playSound(0,0,0);
 	MSG msg;
+	soundSys->setGroupVolume(0,0.3f);
+	soundSys->setGroupVolume(1,1.0f);
+	SkyBox box;
+	box.init(renderer->getDevice(),2000.0f);
+	box.translate(0.0f,500.0f,900.0f);
+	char* tex[6] = {"media/tex/sky.png","media/tex/sky.png","media/tex/sky.png","media/tex/sky.png","media/tex/sky.png","media/tex/sky.png"};
+	box.load(tex);
+	
 	while (gGameState != GAME_QUIT)
 	{
 		renderer->clear(true,true,true,0xff000000);
 		applyCamera();
 
 		renderer->beginScene();
+		box.render();
 		renderer->render(root);
 		guisys->render();
 		renderer->endScene();
@@ -1474,11 +1592,13 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 		gameRun(delta);
 		if (gGameState == GAME_RUN)
 		{
+			box.translate(0.0f,0.0f,-9.0f * delta);
 			root->update(delta);
 			gEngine->getParticleSystemManager()->update();
 		}
 		Point p = inputSys->getMouseClientPosition();
 		guisys->processGUI(p.x,p.y,inputSys->mouseButtonDown(0));
+		soundSys->update(delta);
 		renderer->present();
 		messagePump(&msg);
 		if (msg.message == WM_QUIT)
@@ -1486,7 +1606,7 @@ int WINAPI WinMain(HINSTANCE hist,HINSTANCE phist,LPSTR cmd,int show)
 			break;
 		}
 	}
-
+	box.release();
 	releaseAll();
 	UnregisterClass(info.className,info.hist);
 	return 0;

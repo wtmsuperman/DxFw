@@ -72,14 +72,80 @@ public:
 		orientation.setToRotateInertialToObject(e);
 	}
 
-	void lookAt(const Vector3& position)
+	void lookAt(const Vector3& position,TransformSpace ts=TS_PARENT)
 	{
-		orientation.setToRatationTo(Vector3::UNIT_Z,position - this->pos);
+		Vector3 origin;
+        switch (ts)
+        {
+        default:    // Just in case
+        case TS_WORLD:
+            origin = getDerivedPosition();
+            break;
+        case TS_PARENT:
+			origin = pos;
+            break;
+        case TS_LOCAL:
+            origin = Vector3::ZERO;
+            break;
+        }
+		setDirection(position - origin,ts);
 	}
 
-	void lookAt(float x,float y,float z)
+	void lookAt(float x,float y,float z,TransformSpace ts=TS_PARENT)
 	{
-		orientation.setToRatationTo(Vector3::UNIT_Z,Vector3(x,y,z) - this->pos);
+		lookAt(Vector3(x,y,z),ts);
+	}
+
+	void setDirection(const Vector3& dir,TransformSpace ts=TS_PARENT)
+	{
+		Vector3 targetDir = dir;
+		targetDir.normalize();
+
+        // Transform target direction to world space
+        switch (ts)
+        {
+        case TS_PARENT:
+			/*
+            if (mInheritOrientation)
+            {
+                if (mParent)
+                {
+                    targetDir = mParent->_getDerivedOrientation() * targetDir;
+                }
+            }
+			*/
+            break;
+        case TS_LOCAL:
+			{
+				Matrix3x3 m(getDerivedOrientation());
+				targetDir = targetDir * m;
+			}
+            break;
+        case TS_WORLD:
+            // default orientation
+            break;
+        }
+
+		const Quaternion& currentOrient = getDerivedOrientation();
+		Quaternion targetOrientation;
+            // Get current local direction relative to world space
+		Vector3 currentDir = currentOrient.zAxis();
+
+        if ((currentDir+targetDir).squaredLength() < 0.00005f)
+        {
+            // Oops, a 180 degree turn (infinite possible rotation axes)
+            // Default to yaw i.e. use current UP
+            targetOrientation =
+                Quaternion(-currentOrient.y, -currentOrient.z, currentOrient.w, currentOrient.x);
+        }
+        else
+        {
+            // Derive shortest arc to new direction
+            Quaternion rotQuat;
+			rotQuat.setToRatationTo(currentDir,targetDir);
+            targetOrientation = rotQuat * currentOrient;
+        }
+		setOrientation(targetOrientation);
 	}
 
 	void yaw(float theta)

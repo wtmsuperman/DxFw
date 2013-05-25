@@ -8,3 +8,4 @@
 #include "dx_input_interface.h"
 #include "windows_util.h"
 #include "dx_particle_system_manager.h"
+#include "dx_3dsound.h"
